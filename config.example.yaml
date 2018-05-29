@@ -1,0 +1,15 @@
+options:
+	
+	maintenance: false
+
+	bans:
+		-
+			token: "token-goes-here"
+			reason: "haha-yes"
+
+endpoints:
+
+	discovery: "discovery.your-host.ext"
+	api: "api.your-host.xyz"
+	wiiu: "wiiu.your-host.xyz"
+	3ds: "3ds.your-host.xyz"
