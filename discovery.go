@@ -14,6 +14,7 @@ import (
 	"encoding/json"
 	"encoding/xml"
 	"fmt"
+	"net/http"
 	"os"
 	"time"
 	// externals
@@ -27,6 +28,8 @@ var updateJSON string
 var err error
 var banData []interface{}
 var maintenanceData bool
+var fabricatedXML *result
+var marshalledXML []byte
 
 func main() {
 
@@ -139,38 +142,13 @@ func main() {
 
 	}
 
-	// construct the standard xml
-	standardReturnXML := &result{
-		HasError:   0,
-		Version:    1,
-		Host:       host,
-		APIHost:    apiHost,
-		PortalHost: portalHost,
-		N3DSHost:   nintendo3dsHost,
-	}
-
-	// indent the xml
-	output, err := xml.MarshalIndent(standardReturnXML, "  ", "    ")
-	if err != nil {
-		fmt.Printf("error: %v\n", err)
-	}
-
-	// output the xml
-	os.Stdout.Write([]byte(xml.Header))
-	os.Stdout.Write(output)
-	fmt.Println()
-
-	// output some stuff so go doesn't whine
-	fmt.Printf("maintenance from url: %v\n", pullMaintenanceFromURL)
-	fmt.Printf("bans from url: %v\n", pullBansFromURL)
-
 	// check if we need to start a goroutine to update the status of the server
 	if (pullMaintenanceFromURL == true || pullBansFromURL == true) && (updateCacheByTimeout == true) {
 
 		// start it
 		go func() {
 
-			// temporary variable for unpacking the data
+			// temporary variables for unpacking the data
 			var tmp interface{}
 
 			// check if we update the bans via url
@@ -236,8 +214,69 @@ func main() {
 	// set a get handler for the xml that nintendo consoles that support miiverse use
 	e.GET(endpointForDiscovery, func(c echo.Context) error {
 
-		// place something here
-		return nil
+		// we have a request
+		fmt.Printf("-> request to discovery...\n")
+
+		// first, check if we are in maintenance mode
+		if maintenanceData == true {
+
+			// then we are
+
+			// fabricate the response
+			fabricatedXML = &result{
+				HasError:  1,
+				Version:   1,
+				Code:      400,
+				ErrorCode: 3,
+				Message:   "SERVICE_MAINTENANCE",
+			}
+
+			// marshal it
+			marshalledXML, err = xml.MarshalIndent(fabricatedXML, "  ", "    ")
+			if err != nil {
+
+				fmt.Printf("[err]: could not marshal xml...\n")
+
+			}
+
+			// send the blob
+			return c.XMLBlob(http.StatusOK, marshalledXML)
+
+		} else {
+
+			/*
+				// otherwise, we check if the person connecting is banned
+				for _, b := range banData {
+					if b == a {
+						return true
+					}
+				}
+			*/
+
+			// standard mode
+
+			// fabricate the response
+			fabricatedXML = &result{
+				HasError:   0,
+				Version:    1,
+				Host:       host,
+				APIHost:    apiHost,
+				PortalHost: portalHost,
+				N3DSHost:   nintendo3dsHost,
+			}
+
+			// marshal it
+			marshalledXML, err = xml.MarshalIndent(fabricatedXML, "  ", "    ")
+			if err != nil {
+
+				fmt.Printf("[err]: could not marshal xml...\n")
+
+			}
+
+			// send the blob
+			return c.XMLBlob(http.StatusOK, marshalledXML)
+
+		}
 
 	})
 
@@ -245,6 +284,6 @@ func main() {
 	e.HideBanner = true
 
 	// run the server
-	e.Logger.Fatal(e.Start(fmt.Sprintf(":%d", serverPort)))
+	e.Logger.Fatal(e.StartTLS(fmt.Sprintf(":%d", serverPort), "tls/cert.pem", "tls/key.pem"))
 
 }
