@@ -1,6 +1,6 @@
 /*
 
-discovery/xmls.go
+discovery/xml.go
 
 contains the xml struct used to generate responses
 

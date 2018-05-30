@@ -11,19 +11,25 @@ package main
 
 import (
 	// internals
+	"encoding/json"
 	"encoding/xml"
 	"fmt"
 	"os"
+	"time"
 	// externals
-	//"github.com/labstack/echo"
+	"github.com/labstack/echo"
 	"gopkg.in/yaml.v2"
 )
 
-var maintenance interface{}
-var bans interface{}
+var maintenanceURL string
+var banURL string
+var updateJSON string
+var err error
+var banData []interface{}
+var maintenanceData bool
 
 func main() {
-	
+
 	config := make(map[interface{}]interface{})
 
 	// get the file data
@@ -54,23 +60,38 @@ func main() {
 		panic(err)
 
 	}
-	
+
 	// predefine some variables
 	var pullMaintenanceFromURL bool
-	var pullBansFromURL        bool
+	var pullBansFromURL bool
 
 	// get some config sections from the config
-	settings  := config["options"].(map[interface{}]interface{})
+	settings := config["options"].(map[interface{}]interface{})
 	endpoints := config["endpoints"].(map[interface{}]interface{})
 
 	// endpoints
-	host            := endpoints["discovery"].(string)
-	apiHost         := endpoints["api"].(string)
-	portalHost      := endpoints["wiiu"].(string)
+	host := endpoints["discovery"].(string)
+	apiHost := endpoints["api"].(string)
+	portalHost := endpoints["wiiu"].(string)
 	nintendo3dsHost := endpoints["3ds"].(string)
-	
+
 	// settings
-	
+
+	// the endpoint to place the discovery data on
+	endpointForDiscovery := settings["endpoint"].(string)
+
+	// port for the server
+	serverPort := settings["port"].(int)
+
+	// cache settings
+	cacheSettings := settings["cache"].(map[interface{}]interface{})
+
+	// do we allow using timeouts to update cache
+	updateCacheByTimeout := cacheSettings["useTimeout"].(bool)
+
+	// timeouts for the automatic cache update and endpoint, respectively
+	timeoutForAutomatic := cacheSettings["autoTimeout"].(int)
+
 	// maintenance is either a url to get a json
 	// response from (like this:
 	// { inMaintenance: false }
@@ -78,12 +99,12 @@ func main() {
 	switch settings["maintenance"].(type) {
 
 	case string:
-		pullMaintenanceFromURL = true	
-		maintenance = settings["maintenance"].(string)
+		pullMaintenanceFromURL = true
+		maintenanceURL = settings["maintenance"].(string)
 
 	case bool:
 		pullMaintenanceFromURL = false
-		maintenance = settings["maintenance"].(bool)
+		maintenanceData = settings["maintenance"].(bool)
 
 	default:
 		fmt.Printf("\n[err]: the maintenance field in the options must either be a boolean\n")
@@ -91,7 +112,6 @@ func main() {
 		os.Exit(1)
 
 	}
-	
 
 	// banList is either a url to get a json
 	// response from (like this:
@@ -101,15 +121,15 @@ func main() {
 	// 	{ "token": "three-servicetoken", "reason": "haha*yes" }
 	// ] }
 	// ) or a list of banned servicetokens
-	switch settings["bans"].(type) {	
-	
+	switch settings["bans"].(type) {
+
 	case string:
 		pullBansFromURL = true
-		bans = settings["bans"].(string)
+		banURL = settings["bans"].(string)
 
 	case []interface{}:
 		pullBansFromURL = false
-		bans = settings["bans"].([]interface{})
+		banData = settings["bans"].([]interface{})
 
 	default:
 		fmt.Printf("[err]: the bans field in the options must either be a list of strings\n")
@@ -130,8 +150,7 @@ func main() {
 	}
 
 	// indent the xml
-	output, err := xml.MarshalIndent(standardReturnXML, "  ",
-"    ")
+	output, err := xml.MarshalIndent(standardReturnXML, "  ", "    ")
 	if err != nil {
 		fmt.Printf("error: %v\n", err)
 	}
@@ -142,13 +161,90 @@ func main() {
 	fmt.Println()
 
 	// output some stuff so go doesn't whine
-	fmt.Printf("maintenance from url: %b\n", pullMaintenanceFromURL)
-	fmt.Printf("bans from url: %b\n", pullBansFromURL)
+	fmt.Printf("maintenance from url: %v\n", pullMaintenanceFromURL)
+	fmt.Printf("bans from url: %v\n", pullBansFromURL)
+
+	// check if we need to start a goroutine to update the status of the server
+	if (pullMaintenanceFromURL == true || pullBansFromURL == true) && (updateCacheByTimeout == true) {
+
+		// start it
+		go func() {
+
+			// temporary variable for unpacking the data
+			var tmp interface{}
+
+			// check if we update the bans via url
+			if pullBansFromURL == true {
+
+				// update the bans
+				updateJSON, err = get(banURL)
+				if err != nil {
+
+					// just show a message and go on
+					fmt.Printf("[err]: your banlist update url might be invalid, please check this...")
+
+				}
+
+				// unpack the data
+				if err := json.Unmarshal([]byte(updateJSON), &tmp); err != nil {
+
+					// print an error message and go on
+					fmt.Printf("[err]: error while unpacking the json data from the banlist into a go-supported type...")
+
+				}
+
+				// move this data into the ban data variable
+				banData = tmp.(map[interface{}]interface{})["bans"].([]interface{})
+
+			}
+
+			// check if we update the maintenance via url
+			if pullMaintenanceFromURL == true {
+
+				// update the maintenance status
+				updateJSON, err = get(maintenanceURL)
+				if err != nil {
+
+					// same here
+					fmt.Printf("[err]: your maintenance update url might be invalid")
+
+				}
+
+				// unpack the data
+				if err := json.Unmarshal([]byte(updateJSON), &tmp); err != nil {
+
+					// print an error message and go on
+					fmt.Printf("[err]: error while unpacking the json data from the maintenance endpoint into a go-supported type...")
+
+				}
+
+				// move this data into the variable
+				maintenanceData = tmp.(map[interface{}]interface{})["inMaintenance"].(bool)
+
+			}
+
+			// timeout
+			time.Sleep(time.Duration(timeoutForAutomatic) * time.Second)
+
+		}()
+
+	}
 
 	// load echo
-	//e := echo.New()
+	e := echo.New()
 
-	// set a get handler
-	//e.GET("
+	// set a get handler for the xml that nintendo consoles that support miiverse use
+	e.GET(endpointForDiscovery, func(c echo.Context) error {
+
+		// place something here
+		return nil
+
+	})
+
+	// hide the startup banner
+	e.HideBanner = true
+
+	// run the server
+	e.Logger.Fatal(e.Start(fmt.Sprintf(":%d", serverPort)))
 
 }
