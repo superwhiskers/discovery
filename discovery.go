@@ -14,14 +14,16 @@ import (
 	"encoding/json"
 	"encoding/xml"
 	"fmt"
+	"log"
 	"net/http"
 	"os"
 	"time"
 	// externals
-	"github.com/labstack/echo"
+	"github.com/gorilla/mux"
 	"gopkg.in/yaml.v2"
 )
 
+// a set of variables
 var maintenanceURL string
 var banURL string
 var updateJSON string
@@ -30,7 +32,102 @@ var banData []interface{}
 var maintenanceData bool
 var fabricatedXML *result
 var marshalledXML []byte
+var host string
+var apiHost string
+var portalHost string
+var nintendo3dsHost string
+var overrideDiscovery bool
 
+// the handler for the discovery endpoint
+func discoveryHandler(w http.ResponseWriter, r *http.Request) {
+
+	// we have a request
+	fmt.Printf("-> request to discovery...\n")
+
+	// first, check if we are in maintenance mode
+	if maintenanceData == true {
+
+		// then we are
+
+		// fabricate the response
+		fabricatedXML = &result{
+			HasError:  1,
+			Version:   1,
+			Code:      400,
+			ErrorCode: 3,
+			Message:   "SERVICE_MAINTENANCE",
+		}
+
+		// marshal it
+		marshalledXML, err = xml.MarshalIndent(fabricatedXML, "  ", "    ")
+		if err != nil {
+
+			fmt.Printf("[err]: could not marshal xml...\n")
+
+		}
+
+		// send the xml
+		w.Header().Set("Content-Type", "application/xml")
+		w.Write(marshalledXML)
+
+		// don't continue
+		return
+
+	}
+
+	/*
+		// otherwise, we check if the person connecting is banned
+		for _, b := range banData {
+			if b == a {
+				return true
+			}
+		}
+	*/
+
+	// standard mode
+
+	// check if we override discovery
+	if overrideDiscovery == true {
+
+		// fabricate the response
+		fabricatedXML = &result{
+			HasError:   0,
+			Version:    1,
+			Host:       host,
+			APIHost:    apiHost,
+			PortalHost: portalHost,
+			N3DSHost:   nintendo3dsHost,
+		}
+
+	} else {
+
+		// fabricate the response
+		fabricatedXML = &result{
+			HasError:   0,
+			Version:    1,
+			Host:       r.Host,
+			APIHost:    apiHost,
+			PortalHost: portalHost,
+			N3DSHost:   nintendo3dsHost,
+		}
+
+	}
+
+	// marshal it
+	marshalledXML, err = xml.MarshalIndent(fabricatedXML, "  ", "    ")
+	if err != nil {
+
+		fmt.Printf("[err]: could not marshal xml...\n")
+
+	}
+
+	// send the xml
+	w.Header().Set("Content-Type", "application/xml")
+	w.Write(marshalledXML)
+
+}
+
+// the main function, obviously
 func main() {
 
 	config := make(map[interface{}]interface{})
@@ -73,12 +170,15 @@ func main() {
 	endpoints := config["endpoints"].(map[interface{}]interface{})
 
 	// endpoints
-	host := endpoints["discovery"].(string)
-	apiHost := endpoints["api"].(string)
-	portalHost := endpoints["wiiu"].(string)
-	nintendo3dsHost := endpoints["3ds"].(string)
+	host = endpoints["discovery"].(string)
+	apiHost = endpoints["api"].(string)
+	portalHost = endpoints["wiiu"].(string)
+	nintendo3dsHost = endpoints["3ds"].(string)
 
 	// settings
+
+	// do we override the automatic discovery endpoint calculation
+	overrideDiscovery = settings["overrideDiscovery"].(bool)
 
 	// the endpoint to place the discovery data on
 	endpointForDiscovery := settings["endpoint"].(string)
@@ -208,82 +308,22 @@ func main() {
 
 	}
 
-	// load echo
-	e := echo.New()
+	// create a new router
+	r := mux.NewRouter()
 
-	// set a get handler for the xml that nintendo consoles that support miiverse use
-	e.GET(endpointForDiscovery, func(c echo.Context) error {
+	// register the handler for the discovery endpoint
+	r.HandleFunc(endpointForDiscovery, discoveryHandler)
 
-		// we have a request
-		fmt.Printf("-> request to discovery...\n")
+	// server configuration
+	srv := &http.Server{
+		Handler:      r,
+		Addr:         fmt.Sprintf(":%d", serverPort),
+		WriteTimeout: 15 * time.Second,
+		ReadTimeout:  15 * time.Second,
+	}
 
-		// first, check if we are in maintenance mode
-		if maintenanceData == true {
-
-			// then we are
-
-			// fabricate the response
-			fabricatedXML = &result{
-				HasError:  1,
-				Version:   1,
-				Code:      400,
-				ErrorCode: 3,
-				Message:   "SERVICE_MAINTENANCE",
-			}
-
-			// marshal it
-			marshalledXML, err = xml.MarshalIndent(fabricatedXML, "  ", "    ")
-			if err != nil {
-
-				fmt.Printf("[err]: could not marshal xml...\n")
-
-			}
-
-			// send the blob
-			return c.XMLBlob(http.StatusOK, marshalledXML)
-
-		} else {
-
-			/*
-				// otherwise, we check if the person connecting is banned
-				for _, b := range banData {
-					if b == a {
-						return true
-					}
-				}
-			*/
-
-			// standard mode
-
-			// fabricate the response
-			fabricatedXML = &result{
-				HasError:   0,
-				Version:    1,
-				Host:       host,
-				APIHost:    apiHost,
-				PortalHost: portalHost,
-				N3DSHost:   nintendo3dsHost,
-			}
-
-			// marshal it
-			marshalledXML, err = xml.MarshalIndent(fabricatedXML, "  ", "    ")
-			if err != nil {
-
-				fmt.Printf("[err]: could not marshal xml...\n")
-
-			}
-
-			// send the blob
-			return c.XMLBlob(http.StatusOK, marshalledXML)
-
-		}
-
-	})
-
-	// hide the startup banner
-	e.HideBanner = true
-
-	// run the server
-	e.Logger.Fatal(e.StartTLS(fmt.Sprintf(":%d", serverPort), "tls/cert.pem", "tls/key.pem"))
+	// start the server
+	fmt.Printf("-> starting server...\n")
+	log.Fatal(srv.ListenAndServeTLS("tls/cert.pem", "tls/key.pem"))
 
 }

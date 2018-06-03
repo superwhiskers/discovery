@@ -1,45 +1,49 @@
 options:
-	
-	# endpoint to use for the xml
-	endpoint: "/miiverse/xml"
 
-	# port to use for the server
-	port: 5432
+  # endpoint to use for the xml
+  endpoint: "/miiverse/xml"
 
-	# this can either be what it is now, which is a boolean,
-	# or it can be a url that directs to an endpoint which returns
-	# a json dict like this:
-	# { inMaintenance: false }
-	#
-	maintenance: false
+  # port to use for the server
+  port: 5432
 
-	cache:
+  # this can either be what it is now, which is a boolean,
+  # or it can be a url that directs to an endpoint which returns
+  # a json dict like this:
+  # { inMaintenance: false }
+  #
+  maintenance: false
 
-		# set this to true if you want to use the automatic (timeout)
-		# based update method
-		useTimeout: true
+  # set this to true to always use the discovery endpoint
+  # specified below in the endpoints section
+  overrideDiscovery: false
 
-		# timeout in seconds for the automatic endpoint method
-		autoTimeout: 1
+  cache:
 
-	# this can be either be what is is now, which is
-	# a list of tokens and reasons, or a url to an endpoint
-	# on a server that returns a json dict like this:
-	# { bans: [
-	# 	{ "token": "one-servicetoken", "reason": "haha-yes" },
-	# 	{ "token": "two-servicetoken", "reason": "haha&yes" },
-	# 	{ "token": "three-servicetoken", "reason": "haha*yes" }
-	# ] }
-	#
-	bans:
+    # set this to true if you want to use the automatic (timeout)
+    # based update method
+    useTimeout: true
 
-		-
-			token: "token-goes-here"
-			reason: "haha-yes"
+    # timeout in seconds for the automatic endpoint method
+    autoTimeout: 1
+
+  # this can be either be what is is now, which is
+  # a list of tokens and reasons, or a url to an endpoint
+  # on a server that returns a json dict like this:
+  # { bans: [
+  # 	{ "token": "one-servicetoken", "reason": "haha-yes" },
+  # 	{ "token": "two-servicetoken", "reason": "haha&yes" },
+  # 	{ "token": "three-servicetoken", "reason": "haha*yes" }
+  # ] }
+  #
+  bans:
+
+    -
+      token: "token-goes-here"
+      reason: "haha-yes"
 
 endpoints:
 
-	discovery: "discovery.your-host.ext"
-	api: "api.your-host.xyz"
-	wiiu: "wiiu.your-host.xyz"
-	3ds: "3ds.your-host.xyz"
+  discovery: "discovery.your-host.xyz"
+  api: "api.your-host.xyz"
+  wiiu: "wiiu.your-host.xyz"
+  3ds: "3ds.your-host.xyz"
