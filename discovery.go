@@ -324,6 +324,18 @@ func main() {
 
 	// start the server
 	fmt.Printf("-> starting server...\n")
-	log.Fatal(srv.ListenAndServeTLS("tls/cert.pem", "tls/key.pem"))
+
+	// do we use https?
+	if settings["https"].(bool) == true {
+
+		// host on https
+		log.Fatal(srv.ListenAndServeTLS("tls/cert.pem", "tls/key.pem"))
+
+	} else {
+
+		// host on http
+		log.Fatal(srv.ListenAndServe())
+
+	}
 
 }
