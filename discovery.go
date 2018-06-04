@@ -50,7 +50,7 @@ func discoveryHandler(w http.ResponseWriter, r *http.Request) {
 	// print out request data
 	fmt.Printf("-> ~ new request ~\n")
 	fmt.Printf("-> service token: %s\n", servicetoken)
-	fmt.Printf("-> remoteaddr: %s\n", req.RemoteAddr)
+	fmt.Printf("-> remoteaddr: %s\n", r.RemoteAddr)
 	fmt.Printf("-> x-forwarded-for: %s\n", xForwardedFor)
 	fmt.Printf("-> headers: %v", r.Header)
 
