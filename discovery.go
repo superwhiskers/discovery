@@ -28,7 +28,7 @@ var maintenanceURL string
 var banURL string
 var updateJSON string
 var err error
-var banData []interface{}
+var banData map[interface{}]interface{}
 var maintenanceData bool
 var fabricatedXML *result
 var marshalledXML []byte
@@ -43,6 +43,12 @@ func discoveryHandler(w http.ResponseWriter, r *http.Request) {
 
 	// we have a request
 	fmt.Printf("-> request to discovery...\n")
+
+	// get the servicetoken
+	servicetoken := r.Header.Get("HTTP_X_NINTENDO_SERVICETOKEN")
+
+	// print out the servicetoken
+	fmt.Printf("-> service token: %s\n", servicetoken)
 
 	// first, check if we are in maintenance mode
 	if maintenanceData == true {
@@ -75,40 +81,52 @@ func discoveryHandler(w http.ResponseWriter, r *http.Request) {
 
 	}
 
-	/*
-		// otherwise, we check if the person connecting is banned
-		for _, b := range banData {
-			if b == a {
-				return true
-			}
-		}
-	*/
+	// otherwise, we check if the person connecting is banned
+	if val, ok := banData[servicetoken]; ok {
 
-	// standard mode
+		// ban mode
 
-	// check if we override discovery
-	if overrideDiscovery == true {
+		// type assert the ban map
+		banMap := val.(map[interface{}]interface{})
 
-		// fabricate the response
+		// they're banned, so we can respond with a ban message
 		fabricatedXML = &result{
-			HasError:   0,
-			Version:    1,
-			Host:       host,
-			APIHost:    apiHost,
-			PortalHost: portalHost,
-			N3DSHost:   nintendo3dsHost,
+			HasError:  1,
+			Version:   1,
+			Code:      400,
+			ErrorCode: 7,
+			Message:   banMap["reason"].(string),
 		}
 
 	} else {
 
-		// fabricate the response
-		fabricatedXML = &result{
-			HasError:   0,
-			Version:    1,
-			Host:       r.Host,
-			APIHost:    apiHost,
-			PortalHost: portalHost,
-			N3DSHost:   nintendo3dsHost,
+		// standard mode
+
+		// check if we override discovery
+		if overrideDiscovery == true {
+
+			// fabricate the response
+			fabricatedXML = &result{
+				HasError:   0,
+				Version:    1,
+				Host:       host,
+				APIHost:    apiHost,
+				PortalHost: portalHost,
+				N3DSHost:   nintendo3dsHost,
+			}
+
+		} else {
+
+			// fabricate the response
+			fabricatedXML = &result{
+				HasError:   0,
+				Version:    1,
+				Host:       r.Host,
+				APIHost:    apiHost,
+				PortalHost: portalHost,
+				N3DSHost:   nintendo3dsHost,
+			}
+
 		}
 
 	}
@@ -230,14 +248,14 @@ func main() {
 		pullBansFromURL = true
 		banURL = settings["bans"].(string)
 
-	case []interface{}:
+	case map[interface{}]interface{}:
 		pullBansFromURL = false
-		banData = settings["bans"].([]interface{})
+		banData = settings["bans"].(map[interface{}]interface{})
 
 	default:
-		fmt.Printf("[err]: the bans field in the options must either be a list of strings\n")
+		fmt.Printf("[err]: the bans field in the options must either be a map of strings\n")
 		fmt.Printf("       containing banned servicetokens or a url that points to an endpoint\n")
-		fmt.Printf("       that will return a list of banned servicetokens...")
+		fmt.Printf("       that will return a map of banned servicetokens...\n")
 		os.Exit(1)
 
 	}
@@ -259,7 +277,7 @@ func main() {
 				if err != nil {
 
 					// just show a message and go on
-					fmt.Printf("[err]: your banlist update url might be invalid, please check this...")
+					fmt.Printf("[err]: your banlist update url might be invalid, please check this...\n")
 
 				}
 
@@ -267,12 +285,12 @@ func main() {
 				if err := json.Unmarshal([]byte(updateJSON), &tmp); err != nil {
 
 					// print an error message and go on
-					fmt.Printf("[err]: error while unpacking the json data from the banlist into a go-supported type...")
+					fmt.Printf("[err]: error while unpacking the json data from the banlist into a go-supported type...\n")
 
 				}
 
 				// move this data into the ban data variable
-				banData = tmp.(map[interface{}]interface{})["bans"].([]interface{})
+				banData = tmp.(map[interface{}]interface{})["bans"].(map[interface{}]interface{})
 
 			}
 
@@ -284,7 +302,7 @@ func main() {
 				if err != nil {
 
 					// same here
-					fmt.Printf("[err]: your maintenance update url might be invalid")
+					fmt.Printf("[err]: your maintenance update url might be invalid\n")
 
 				}
 
@@ -292,7 +310,7 @@ func main() {
 				if err := json.Unmarshal([]byte(updateJSON), &tmp); err != nil {
 
 					// print an error message and go on
-					fmt.Printf("[err]: error while unpacking the json data from the maintenance endpoint into a go-supported type...")
+					fmt.Printf("[err]: error while unpacking the json data from the maintenance endpoint into a go-supported type...\n")
 
 				}
 

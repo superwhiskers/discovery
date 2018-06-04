@@ -1,5 +1,8 @@
 options:
 
+  # do we use https? (only use behind reverse proxy that adds https)
+  https: true
+
   # endpoint to use for the xml
   endpoint: "/miiverse/xml"
 
@@ -27,18 +30,17 @@ options:
     autoTimeout: 1
 
   # this can be either be what is is now, which is
-  # a list of tokens and reasons, or a url to an endpoint
+  # a map of tokens to a map with a reason, or a url to an endpoint
   # on a server that returns a json dict like this:
-  # { bans: [
-  # 	{ "token": "one-servicetoken", "reason": "haha-yes" },
-  # 	{ "token": "two-servicetoken", "reason": "haha&yes" },
-  # 	{ "token": "three-servicetoken", "reason": "haha*yes" }
-  # ] }
+  # { bans: {
+  # 	"one-servicetoken": { "reason": "haha-yes" },
+  # 	"two-servicetoken": { "reason": "haha&yes" },
+  # 	"three-servicetoken": { "reason": "haha*yes" }
+  # } }
   #
   bans:
 
-    -
-      token: "token-goes-here"
+    token-goes-here:
       reason: "haha-yes"
 
 endpoints:
