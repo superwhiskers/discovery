@@ -42,7 +42,16 @@ var overrideDiscovery bool
 func discoveryHandler(w http.ResponseWriter, r *http.Request) {
 
 	// get the servicetoken
-	servicetoken := r.Header.Get("HTTP_X_NINTENDO_SERVICETOKEN")
+	servicetoken, err := decodeServiceToken(r.Header.Get("X-Nintendo-Servicetoken"))
+	if err != nil {
+		servicetoken = r.Header.Get("X-Nintendo-Servicetoken")
+	}
+
+	// get the unpacked parampack
+	parampack, err := decodeParamPack(r.Header.Get("X-Nintendo-Parampack"))
+	if err != nil {
+		fmt.Printf("-> unable to decode parampack. shown data is a nullified parampack\n")
+	}
 
 	// get x-forwarded-for
 	xForwardedFor := r.Header.Get("X-Forwarded-For")
@@ -52,7 +61,7 @@ func discoveryHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Printf("-> service token: %s\n", servicetoken)
 	fmt.Printf("-> remoteaddr: %s\n", r.RemoteAddr)
 	fmt.Printf("-> x-forwarded-for: %s\n", xForwardedFor)
-	fmt.Printf("-> headers: %v", r.Header)
+	fmt.Printf("-> parampack: %v", parampack)
 
 	// first, check if we are in maintenance mode
 	if maintenanceData == true {
