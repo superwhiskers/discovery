@@ -14,6 +14,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"unicode"
 )
 
 // function to get data from a URL.
@@ -113,12 +114,20 @@ func decodeServiceToken(serviceToken string) (string, error) {
 // nintendo parampack decoder
 func decodeParamPack(parampack string) (paramPack, error) {
 
+	// strip spaces
+	paramStripped := strings.Map(func(r rune) rune {
+		if unicode.IsSpace(r) {
+			return -1
+		}
+		return r
+	}, parampack)
+
 	// decode it from base64
-	decodedParampack, err := base64.StdEncoding.DecodeString(parampack)
+	decodedParampack, err := base64.StdEncoding.DecodeString(paramStripped)
 
 	// if there is an error
 	if err != nil {
-
+		
 		// exit the function and return the error
 		return nilParamPack, err
 

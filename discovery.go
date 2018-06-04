@@ -61,7 +61,7 @@ func discoveryHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Printf("-> service token: %s\n", servicetoken)
 	fmt.Printf("-> remoteaddr: %s\n", r.RemoteAddr)
 	fmt.Printf("-> x-forwarded-for: %s\n", xForwardedFor)
-	fmt.Printf("-> parampack: %v", parampack)
+	fmt.Printf("-> parampack: %v\n", parampack)
 
 	// first, check if we are in maintenance mode
 	if maintenanceData == true {
