@@ -41,14 +41,18 @@ var overrideDiscovery bool
 // the handler for the discovery endpoint
 func discoveryHandler(w http.ResponseWriter, r *http.Request) {
 
-	// we have a request
-	fmt.Printf("-> request to discovery...\n")
-
 	// get the servicetoken
 	servicetoken := r.Header.Get("HTTP_X_NINTENDO_SERVICETOKEN")
 
-	// print out the servicetoken
+	// get x-forwarded-for
+	xForwardedFor := r.Header.Get("X-Forwarded-For")
+
+	// print out request data
+	fmt.Printf("-> ~ new request ~\n")
 	fmt.Printf("-> service token: %s\n", servicetoken)
+	fmt.Printf("-> remoteaddr: %s\n", req.RemoteAddr)
+	fmt.Printf("-> x-forwarded-for: %s\n", xForwardedFor)
+	fmt.Printf("-> headers: %v", r.Header)
 
 	// first, check if we are in maintenance mode
 	if maintenanceData == true {
