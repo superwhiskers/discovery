@@ -198,11 +198,13 @@ func decodeParampack(parampack string) (paramPack, error) {
 		case "title_id":
 
 			// titleids are special
-			unstringifiedTID, err := unstringifyTID(splitParampack[ind+1])
-			if err != nil {
-				unstringifiedTID = "0000000000000000"
-			}
-			titleID = unstringifiedTID
+			/*
+				unstringifiedTID, err := unstringifyTID(splitParampack[ind+1])
+				if err != nil {
+					unstringifiedTID = "0000000000000000"
+				}
+			*/
+			titleID = splitParampack[ind+1]
 
 		case "access_key":
 			accessKey = splitParampack[ind+1]
