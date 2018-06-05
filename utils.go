@@ -111,8 +111,8 @@ func decodeServiceToken(serviceToken string) (string, error) {
 
 }
 
-// turn a stringified tid to a usable one
-func unstringifyTID(stringifiedTID string) (string, error) {
+// turn a stringified tid to a usable one (wiiu)
+func unstringifyWiiUTID(stringifiedTID string) (string, error) {
 
 	// convert the string to an int
 	intTID, err := strconv.ParseUint(stringifiedTID, 10, 64)
