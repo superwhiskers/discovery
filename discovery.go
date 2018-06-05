@@ -10,6 +10,7 @@ if you want a copy, go to http://www.gnu.org/licenses/
 package main
 
 import (
+	"gitlab.com/superwhiskers/libninty"
 	// internals
 	"encoding/json"
 	"encoding/xml"
@@ -42,13 +43,13 @@ var overrideDiscovery bool
 func discoveryHandler(w http.ResponseWriter, r *http.Request) {
 
 	// get the servicetoken
-	servicetoken, err := decodeServiceToken(r.Header.Get("X-Nintendo-Servicetoken"))
+	servicetoken, err := libninty.DecodeServiceToken(r.Header.Get("X-Nintendo-Servicetoken"))
 	if err != nil {
 		servicetoken = r.Header.Get("X-Nintendo-Servicetoken")
 	}
 
 	// get the unpacked parampack
-	parampack, err := decodeParampack(r.Header.Get("X-Nintendo-Parampack"))
+	parampack, err := libninty.DecodeParampack(r.Header.Get("X-Nintendo-Parampack"))
 	if err != nil {
 		fmt.Printf("-> unable to decode parampack. shown data is a nullified parampack\n")
 	}
