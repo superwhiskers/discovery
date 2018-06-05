@@ -57,8 +57,8 @@ func get(url string) (string, error) {
 // this struct contains all of the data a parampack would contain in
 // a go-compatible format
 type paramPack struct {
-	TitleID            int
-	AccessKey          int
+	TitleID            string
+	AccessKey          string
 	PlatformID         int
 	RegionID           int
 	LanguageID         int
@@ -68,15 +68,15 @@ type paramPack struct {
 	FriendRestriction  int
 	RatingRestriction  int
 	RatingOrganization int
-	TransferableID     int
+	TransferableID     string
 	TimezoneName       string
 	UTCOffset          int
 	RemasterVersion    int
 }
 
 var nilParamPack = paramPack{
-	TitleID:            0,
-	AccessKey:          0,
+	TitleID:            "0000000000000000",
+	AccessKey:          "",
 	PlatformID:         0,
 	RegionID:           0,
 	LanguageID:         0,
@@ -86,7 +86,7 @@ var nilParamPack = paramPack{
 	FriendRestriction:  0,
 	RatingRestriction:  0,
 	RatingOrganization: 0,
-	TransferableID:     0,
+	TransferableID:     "",
 	TimezoneName:       "",
 	UTCOffset:          0,
 	RemasterVersion:    0,
@@ -111,8 +111,43 @@ func decodeServiceToken(serviceToken string) (string, error) {
 
 }
 
+// turn a stringified tid to a usable one
+func unstringifyTID(stringifiedTID string) (string, error) {
+
+	// convert the string to an int
+	intTID, err := strconv.ParseUint(stringifiedTID, 10, 64)
+
+	// return an error if there is one
+	if err != nil {
+
+		// return the error
+		return "", err
+
+	}
+
+	// convert it back to a string
+	tid := strconv.FormatUint(intTID, 16)
+
+	// pad it to 16 characters
+	if len(tid) != 16 {
+
+		// loop until it is 16 characters
+		for x := len(tid); x < 16; x++ {
+
+			// pad with zeroes
+			tid = "0" + tid
+
+		}
+
+	}
+
+	// return the zero padded tid
+	return tid, nil
+
+}
+
 // nintendo parampack decoder
-func decodeParamPack(parampack string) (paramPack, error) {
+func decodeParampack(parampack string) (paramPack, error) {
 
 	// strip spaces
 	paramStripped := strings.Map(func(r rune) rune {
@@ -127,7 +162,7 @@ func decodeParamPack(parampack string) (paramPack, error) {
 
 	// if there is an error
 	if err != nil {
-		
+
 		// exit the function and return the error
 		return nilParamPack, err
 
@@ -137,8 +172,8 @@ func decodeParamPack(parampack string) (paramPack, error) {
 	splitParampack := strings.Split(string(decodedParampack[:]), "\\")
 
 	// variables to be placed into the struct
-	titleID := 0
-	accessKey := 0
+	titleID := "0000000000000000"
+	accessKey := ""
 	platformID := 0
 	regionID := 0
 	languageID := 0
@@ -148,7 +183,7 @@ func decodeParamPack(parampack string) (paramPack, error) {
 	friendRestriction := 0
 	ratingRestriction := 0
 	ratingOrganization := 0
-	transferableID := 0
+	transferableID := ""
 	timezoneName := ""
 	utcOffset := 0
 	remasterVersion := 0
@@ -161,18 +196,16 @@ func decodeParamPack(parampack string) (paramPack, error) {
 		switch ele {
 
 		case "title_id":
-			tmp, err := strconv.Atoi(splitParampack[ind+1])
+
+			// titleids are special
+			unstringifiedTID, err := unstringifyTID(splitParampack[ind+1])
 			if err != nil {
-				tmp = 0
+				unstringifiedTID = "0000000000000000"
 			}
-			titleID = tmp
+			titleID = unstringifiedTID
 
 		case "access_key":
-			tmp, err := strconv.Atoi(splitParampack[ind+1])
-			if err != nil {
-				tmp = 0
-			}
-			accessKey = tmp
+			accessKey = splitParampack[ind+1]
 
 		case "platform_id":
 			tmp, err := strconv.Atoi(splitParampack[ind+1])
@@ -238,11 +271,7 @@ func decodeParamPack(parampack string) (paramPack, error) {
 			ratingOrganization = tmp
 
 		case "transferable_id":
-			tmp, err := strconv.Atoi(splitParampack[ind+1])
-			if err != nil {
-				tmp = 0
-			}
-			transferableID = tmp
+			transferableID = splitParampack[ind+1]
 
 		case "tz_name":
 			timezoneName = splitParampack[ind+1]

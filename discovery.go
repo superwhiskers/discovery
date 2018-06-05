@@ -48,7 +48,7 @@ func discoveryHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// get the unpacked parampack
-	parampack, err := decodeParamPack(r.Header.Get("X-Nintendo-Parampack"))
+	parampack, err := decodeParampack(r.Header.Get("X-Nintendo-Parampack"))
 	if err != nil {
 		fmt.Printf("-> unable to decode parampack. shown data is a nullified parampack\n")
 	}
@@ -61,7 +61,7 @@ func discoveryHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Printf("-> service token: %s\n", servicetoken)
 	fmt.Printf("-> remoteaddr: %s\n", r.RemoteAddr)
 	fmt.Printf("-> x-forwarded-for: %s\n", xForwardedFor)
-	fmt.Printf("-> parampack: %v\n", parampack)
+	fmt.Printf("-> parampack: \n%+v\n", parampack)
 
 	// first, check if we are in maintenance mode
 	if maintenanceData == true {
