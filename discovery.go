@@ -269,15 +269,18 @@ func main() {
 	// timeouts for the automatic cache update and endpoint, respectively
 	timeoutForAutomatic := cacheSettings["autoTimeout"].(int)
 
-	// maintenance is either a url to get a json
+	// maintenance is either a url to get a plaintext
 	// response from (like this:
-	// { inMaintenance: false }
+	//
+	// inMaintenance: false
+	//
 	// ) or a boolean
 	switch settings["maintenance"].(type) {
 
 	case string:
 		pullMaintenanceFromURL = true
 		maintenanceURL = settings["maintenance"].(string)
+		maintenanceData = false
 
 	case bool:
 		pullMaintenanceFromURL = false
@@ -290,19 +293,20 @@ func main() {
 
 	}
 
-	// banList is either a url to get a json
+	// banList is either a url to get a plaintext
 	// response from (like this:
-	// { bans: [
-	// 	{ "token": "one-servicetoken", "reason": "haha-yes" },
-	// 	{ "token": "two-servicetoken", "reason": "haha&yes" },
-	// 	{ "token": "three-servicetoken", "reason": "haha*yes" }
-	// ] }
+	//
+	// one-servicetoken: haha-yes
+	// two-servicetoken: haha&yes
+	// three-servicetoken: haha*yes
+	//
 	// ) or a list of banned servicetokens
 	switch settings["bans"].(type) {
 
 	case string:
 		pullBansFromURL = true
 		banURL = settings["bans"].(string)
+		banData = map[interface{}]interface{}{}
 
 	case map[interface{}]interface{}:
 		pullBansFromURL = false
