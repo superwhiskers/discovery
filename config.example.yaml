@@ -11,9 +11,13 @@ options:
 
   # this can either be what it is now, which is a boolean,
   # or it can be a url that directs to an endpoint which returns
-  # a json dict like this:
-  # { inMaintenance: false }
-  #
+  # a response like this:
+  # 
+  # inMaintenance: false
+  # 
+  # note: the Content-Type must be text/plain or else the server will not
+  # accept it!
+  # 
   maintenance: false
 
   # set this to true to always use the discovery endpoint
@@ -31,13 +35,14 @@ options:
 
   # this can be either be what is is now, which is
   # a map of tokens to a map with a reason, or a url to an endpoint
-  # on a server that returns a json dict like this:
-  # { bans: {
-  # 	"one-servicetoken": { "reason": "haha-yes" },
-  # 	"two-servicetoken": { "reason": "haha&yes" },
-  # 	"three-servicetoken": { "reason": "haha*yes" }
-  # } }
+  # on a server that returns a response like this:
   #
+  # one-servicetoken: reason
+  # two-servicetoken: reason
+  # 
+  # note: the Content-Type must be text/plain or else the server will not
+  # accept it!
+  # 
   bans:
 
     token-goes-here:

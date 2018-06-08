@@ -14,7 +14,7 @@ import (
 
 // function to get data from a URL.
 // based on https://www.github.com/thbar/golang-playground/blob/master/download-files.go
-func get(url string) (string, error) {
+func get(url string) (string, string, error) {
 
 	// attempt to download the contents
 	res, err := http.Get(url)
@@ -23,7 +23,7 @@ func get(url string) (string, error) {
 	if err != nil {
 
 		// return an empty string, and the error
-		return "", err
+		return "", "", err
 
 	}
 
@@ -37,7 +37,7 @@ func get(url string) (string, error) {
 	if err != nil {
 
 		// return an empty string, and the error
-		return "", err
+		return "", "", err
 
 	}
 
@@ -45,6 +45,6 @@ func get(url string) (string, error) {
 	ret := string(data[:])
 
 	// return the request response
-	return ret, nil
+	return ret, res.Header.Get("Content-Type"), nil
 
 }

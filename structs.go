@@ -1,8 +1,8 @@
 /*
 
-discovery/xml.go
+discovery/structs.go
 
-contains the xml struct used to generate responses
+contains structs used to do things
 
 written by superwhiskers, licensed under gnu agpl.
 if you want a copy, go to http://www.gnu.org/licenses/
@@ -11,7 +11,7 @@ if you want a copy, go to http://www.gnu.org/licenses/
 
 package main
 
-// Result is a result that can or cannot be errored
+// result is a result that can or cannot be errored
 type result struct {
 	HasError   int    `xml:"has_error"`
 	Version    int    `xml:"version"`

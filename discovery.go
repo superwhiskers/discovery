@@ -10,9 +10,12 @@ if you want a copy, go to http://www.gnu.org/licenses/
 package main
 
 import (
+	"strconv"
+	"strings"
+
 	"gitlab.com/superwhiskers/libninty"
 	// internals
-	"encoding/json"
+
 	"encoding/xml"
 	"fmt"
 	"log"
@@ -319,61 +322,128 @@ func main() {
 		// start it
 		go func() {
 
-			// temporary variables for unpacking the data
-			var tmp interface{}
+			// do this forever
+			for {
 
-			// check if we update the bans via url
-			if pullBansFromURL == true {
+				// temporary variables for unpacking the data
+				tmp := make(map[interface{}]interface{})
 
-				// update the bans
-				updateJSON, err = get(banURL)
-				if err != nil {
+				// check if we update the bans via url
+				if pullBansFromURL == true {
 
-					// just show a message and go on
-					fmt.Printf("[err]: your banlist update url might be invalid, please check this...\n")
+					// update the bans
+					updateData, contenttype, err := get(banURL)
+					if err != nil {
+
+						// just show a message and go on
+						fmt.Printf("[err]: your banlist update url might be invalid, please check this...\n")
+
+					} else if contenttype != "text/plain" {
+
+						// show a message and go on
+						fmt.Printf("[err]: content type of banlist url is not text/plain...\n")
+
+					} else {
+
+						// create a variable with the request data split on newlines
+						sepUpdatedData := strings.Split(updateData, "\n")
+
+						// create another variable that will hold the split data of each index of the sepUpdatedData variable
+						almostUpdatedData := [][]string{}
+
+						// loop over and fill up the almostUpdatedData variable with that data
+						for _, val := range sepUpdatedData {
+
+							// split the index into two substrings
+							almostUpdatedData = append(almostUpdatedData, strings.SplitN(val, ": ", 2))
+
+						}
+
+						// loop over almostUpdatedData filling up the tmp variable with maps
+						for _, val := range almostUpdatedData {
+
+							// add the map
+							tmp[val[0]] = map[interface{}]interface{}{"reason": val[1]}
+
+						}
+
+						// move this data into the ban data variable
+						banData = tmp
+
+						// let the user know
+						fmt.Printf("-> updated banlists...\n")
+
+					}
 
 				}
 
-				// unpack the data
-				if err := json.Unmarshal([]byte(updateJSON), &tmp); err != nil {
+				// check if we update the maintenance via url
+				if pullMaintenanceFromURL == true {
 
-					// print an error message and go on
-					fmt.Printf("[err]: error while unpacking the json data from the banlist into a go-supported type...\n")
+					// update the maintenance status
+					updateData, contenttype, err := get(maintenanceURL)
+					if err != nil {
+
+						// same here
+						fmt.Printf("[err]: your maintenance update url might be invalid\n")
+
+					} else if contenttype != "text/plain" {
+
+						// show a message and go on
+						fmt.Printf("[err]: content type of banlist url is not text/plain...\n")
+
+					} else {
+
+						// create a variable with the request data split on newlines
+						sepUpdatedData := strings.Split(updateData, "\n")
+
+						// create another variable that will hold the split data of each index of the sepUpdatedData variable
+						almostUpdatedData := [][]string{}
+
+						// loop over and fill up the almostUpdatedData variable with that data
+						for _, val := range sepUpdatedData {
+
+							// split the index into two substrings
+							almostUpdatedData = append(almostUpdatedData, strings.SplitN(val, ": ", 2))
+
+						}
+
+						// loop over almostUpdatedData filling up the tmp variable with maps
+						for _, val := range almostUpdatedData {
+
+							// parse boolean
+							tmp2, err := strconv.ParseBool(val[1])
+
+							// handle errors
+							if err != nil {
+
+								// show a message
+								fmt.Printf("[err]: incorrectly formatted boolean: %s\n", val[1])
+
+								// reset the temporary variable
+								tmp2 = false
+
+							}
+
+							// add the map
+							tmp[val[0]] = tmp2
+
+						}
+
+						// move this data into the variable
+						maintenanceData = tmp["inMaintenance"].(bool)
+
+						// let the user know that we did it
+						fmt.Printf("-> updated maintenance status\n")
+
+					}
 
 				}
 
-				// move this data into the ban data variable
-				banData = tmp.(map[interface{}]interface{})["bans"].(map[interface{}]interface{})
+				// timeout
+				time.Sleep(time.Duration(timeoutForAutomatic) * time.Second)
 
 			}
-
-			// check if we update the maintenance via url
-			if pullMaintenanceFromURL == true {
-
-				// update the maintenance status
-				updateJSON, err = get(maintenanceURL)
-				if err != nil {
-
-					// same here
-					fmt.Printf("[err]: your maintenance update url might be invalid\n")
-
-				}
-
-				// unpack the data
-				if err := json.Unmarshal([]byte(updateJSON), &tmp); err != nil {
-
-					// print an error message and go on
-					fmt.Printf("[err]: error while unpacking the json data from the maintenance endpoint into a go-supported type...\n")
-
-				}
-
-				// move this data into the variable
-				maintenanceData = tmp.(map[interface{}]interface{})["inMaintenance"].(bool)
-
-			}
-
-			// timeout
-			time.Sleep(time.Duration(timeoutForAutomatic) * time.Second)
 
 		}()
 
