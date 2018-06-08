@@ -30,14 +30,13 @@ var banURL string
 var updateJSON string
 var err error
 var banData map[interface{}]interface{}
+var defaultEndpoints map[interface{}]interface{}
 var maintenanceData bool
 var fabricatedXML *result
 var marshalledXML []byte
-var host string
-var apiHost string
-var portalHost string
-var nintendo3dsHost string
 var overrideDiscovery bool
+var groupdefs map[interface{}]interface{}
+var endpoints map[interface{}]interface{}
 
 // the handler for the discovery endpoint
 func discoveryHandler(w http.ResponseWriter, r *http.Request) {
@@ -119,26 +118,66 @@ func discoveryHandler(w http.ResponseWriter, r *http.Request) {
 		// check if we override discovery
 		if overrideDiscovery == true {
 
-			// fabricate the response
-			fabricatedXML = &result{
-				HasError:   0,
-				Version:    1,
-				Host:       host,
-				APIHost:    apiHost,
-				PortalHost: portalHost,
-				N3DSHost:   nintendo3dsHost,
+			// check if we use a different set of endpoints for this client
+			if val, ok := groupdefs[servicetoken]; ok {
+
+				// we do
+				endpointset := endpoints[val.(string)].(map[interface{}]interface{})
+
+				// and fabricate the response
+				fabricatedXML = &result{
+					HasError:   0,
+					Version:    1,
+					Host:       endpointset["discovery"].(string),
+					APIHost:    endpointset["api"].(string),
+					PortalHost: endpointset["wiiu"].(string),
+					N3DSHost:   endpointset["3ds"].(string),
+				}
+
+			} else {
+
+				// otherwise, fabricate the response as normal
+				fabricatedXML = &result{
+					HasError:   0,
+					Version:    1,
+					Host:       defaultEndpoints["discovery"].(string),
+					APIHost:    defaultEndpoints["api"].(string),
+					PortalHost: defaultEndpoints["wiiu"].(string),
+					N3DSHost:   defaultEndpoints["3ds"].(string),
+				}
+
 			}
 
 		} else {
 
-			// fabricate the response
-			fabricatedXML = &result{
-				HasError:   0,
-				Version:    1,
-				Host:       r.Host,
-				APIHost:    apiHost,
-				PortalHost: portalHost,
-				N3DSHost:   nintendo3dsHost,
+			// check if we use a different set of endpoints for this client
+			if val, ok := groupdefs[servicetoken]; ok {
+
+				// we do
+				endpointset := endpoints[val.(string)].(map[interface{}]interface{})
+
+				// and fabricate the response
+				fabricatedXML = &result{
+					HasError:   0,
+					Version:    1,
+					Host:       r.Host,
+					APIHost:    endpointset["api"].(string),
+					PortalHost: endpointset["wiiu"].(string),
+					N3DSHost:   endpointset["3ds"].(string),
+				}
+
+			} else {
+
+				// otherwise, fabricate the response as normal
+				fabricatedXML = &result{
+					HasError:   0,
+					Version:    1,
+					Host:       r.Host,
+					APIHost:    defaultEndpoints["api"].(string),
+					PortalHost: defaultEndpoints["wiiu"].(string),
+					N3DSHost:   defaultEndpoints["3ds"].(string),
+				}
+
 			}
 
 		}
@@ -199,13 +238,13 @@ func main() {
 
 	// get some config sections from the config
 	settings := config["options"].(map[interface{}]interface{})
-	endpoints := config["endpoints"].(map[interface{}]interface{})
+	endpoints = config["endpoints"].(map[interface{}]interface{})
 
-	// endpoints
-	host = endpoints["discovery"].(string)
-	apiHost = endpoints["api"].(string)
-	portalHost = endpoints["wiiu"].(string)
-	nintendo3dsHost = endpoints["3ds"].(string)
+	// default endpoints
+	defaultEndpoints = endpoints["default"].(map[interface{}]interface{})
+
+	// group definitions
+	groupdefs = config["groupdefs"].(map[interface{}]interface{})
 
 	// settings
 

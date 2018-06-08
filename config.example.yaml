@@ -43,9 +43,26 @@ options:
     token-goes-here:
       reason: "haha-yes"
 
+# groups of sets of endpoints that certain servicetokens point to
 endpoints:
 
-  discovery: "discovery.your-host.xyz"
-  api: "api.your-host.xyz"
-  wiiu: "wiiu.your-host.xyz"
-  3ds: "3ds.your-host.xyz"
+  # this group must always be here
+  default:
+    discovery: "discovery.your-host.xyz"
+    api: "api.your-host.xyz"
+    wiiu: "wiiu.your-host.xyz"
+    3ds: "3ds.your-host.xyz"
+
+  # another optional group
+  group-name:
+    discovery: "discovery.your-host.xyz"
+    api: "api.your-host.xyz"
+    wiiu: "wiiu.your-host.xyz"
+    3ds: "3ds.your-host.xyz"
+
+# contains servicetokens and the group they match to
+# all servicetokens go to the default group unless otherwise specified
+groupdefs:
+
+  # a servicetoken group definition. any client with servicetoken-one uses the endpoints in group-name
+  servicetoken-one: "group-name"
