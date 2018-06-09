@@ -44,7 +44,7 @@ var endpoints map[interface{}]interface{}
 func discoveryHandler(w http.ResponseWriter, r *http.Request) {
 
 	// the response
-	fabricatedXML := &result{}
+	var fabricatedXML *result
 
 	// trigger to tell if we will actually be able to ban it
 	attemptToBan := true
@@ -148,9 +148,9 @@ func discoveryHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 	}
-	
+
 	// check if we've already created a response to send
-	if fabricatedXML == &result{} {
+	if fabricatedXML == nil {
 
 		// standard mode
 
