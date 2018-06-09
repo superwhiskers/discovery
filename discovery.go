@@ -37,6 +37,7 @@ var defaultEndpoints map[interface{}]interface{}
 var maintenanceData bool
 var marshalledXML []byte
 var overrideDiscovery bool
+var bcryptCost int
 var groupdefs map[interface{}]interface{}
 var endpoints map[interface{}]interface{}
 
@@ -62,7 +63,7 @@ func discoveryHandler(w http.ResponseWriter, r *http.Request) {
 	} else {
 
 		// hash the servicetoken
-		servicetoken, err = hash(servicetoken)
+		servicetoken, err = hash(servicetoken, bcryptCost)
 		if err != nil {
 
 			// display a message
@@ -289,6 +290,9 @@ func main() {
 
 	// do we override the automatic discovery endpoint calculation
 	overrideDiscovery = settings["overrideDiscovery"].(bool)
+
+	// cost for bcrypt to use
+	bcryptCost = settings["hashCost"].(int)
 
 	// the endpoint to place the discovery data on
 	endpointForDiscovery := settings["endpoint"].(string)

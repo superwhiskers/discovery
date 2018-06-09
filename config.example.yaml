@@ -9,6 +9,11 @@ options:
   # port to use for the server
   port: 5432
 
+  # basically how much work should it take the cpu of your server
+  # to compute the hashes of servicetokens. the higher it is, the
+  # more work it takes
+  hashCost: 8
+
   # this can either be what it is now, which is a boolean,
   # or it can be a url that directs to an endpoint which returns
   # a response like this:
@@ -34,11 +39,11 @@ options:
     autoTimeout: 1
 
   # this can be either be what is is now, which is
-  # a map of tokens to a map with a reason, or a url to an endpoint
+  # a map of hashed servicetokens to a map with a reason, or a url to an endpoint
   # on a server that returns a response like this:
   #
-  # one-servicetoken: reason
-  # two-servicetoken: reason
+  # one-servicetoken-hash: reason
+  # two-servicetoken-hash: reason
   # 
   # note: the Content-Type must be text/plain or else the server will not
   # accept it!

@@ -53,10 +53,10 @@ func get(url string) (string, string, error) {
 }
 
 // object hashing
-func hash(object string) (string, error) {
+func hash(object string, cost int) (string, error) {
 
 	// use bcrypt
-	bytes, err := bcrypt.GenerateFromPassword([]byte(object), 14)
+	bytes, err := bcrypt.GenerateFromPassword([]byte(object), cost)
 
 	// return that data
 	return string(bytes[:]), err
