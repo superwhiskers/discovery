@@ -311,8 +311,11 @@ func main() {
 	// cache settings
 	cacheSettings := settings["cache"].(map[interface{}]interface{})
 
-	// timeouts for the automatic cache update and endpoint, respectively
-	timeoutForAutomatic := cacheSettings["autoTimeout"].(int)
+	// timeout (in seconds) for maintenance status updates
+	maintenanceTimeout := cacheSettings["maintenanceTimeout"].(int)
+
+	// timeout (in seconds) for banlist status updates
+	banlistTimeout := cacheSettings["banlistTimeout"].(int)
 
 	// maintenance is either a url to get a plaintext
 	// response from (like this:
@@ -365,8 +368,8 @@ func main() {
 
 	}
 
-	// check if we need to start a goroutine to update the status of the server
-	if pullMaintenanceFromURL == true || pullBansFromURL == true {
+	// check if we use a goroutine to update the maintenance status
+	if pullMaintenanceFromURL == true {
 
 		// start it
 		go func() {
@@ -377,78 +380,89 @@ func main() {
 				// temporary variables for unpacking the data
 				tmp := make(map[interface{}]interface{})
 
-				// check if we update the bans via url
-				if pullBansFromURL == true {
+				// update the maintenance status
+				updateData, err := get(maintenanceURL)
+				if err != nil {
 
-					// update the bans
-					updateData, err := get(banURL)
+					// same here
+					fmt.Printf("[err]: your maintenance update url might be invalid\n")
+
+				} else {
+
+					// unmarshal yaml data gotten from the url
+					err = yaml.Unmarshal([]byte(updateData), tmp)
+
+					// handle errors
 					if err != nil {
 
-						// just show a message and go on
-						fmt.Printf("[err]: your banlist update url might be invalid, please check this...\n")
+						// show an error message if needed
+						fmt.Printf("[err]: the data at your maintenance update url is invalid yaml...\n")
 
 					} else {
 
-						// unmarshal yaml data gotten from the url
-						err = yaml.Unmarshal([]byte(updateData), tmp)
+						// move this data into the variable
+						maintenanceData = tmp["inMaintenance"].(bool)
 
-						// handle errors
-						if err != nil {
-
-							// show an error message if needed
-							fmt.Printf("[err]: the data at your maintenance update url is invalid yaml...\n")
-
-						} else {
-
-							// move this data into the ban data variable
-							banData = tmp
-
-							// let the user know
-							fmt.Printf("-> updated banlists...\n")
-
-						}
-
-					}
-
-				}
-
-				// check if we update the maintenance via url
-				if pullMaintenanceFromURL == true {
-
-					// update the maintenance status
-					updateData, err := get(maintenanceURL)
-					if err != nil {
-
-						// same here
-						fmt.Printf("[err]: your maintenance update url might be invalid\n")
-
-					} else {
-
-						// unmarshal yaml data gotten from the url
-						err = yaml.Unmarshal([]byte(updateData), tmp)
-
-						// handle errors
-						if err != nil {
-
-							// show an error message if needed
-							fmt.Printf("[err]: the data at your maintenance update url is invalid yaml...\n")
-
-						} else {
-
-							// move this data into the variable
-							maintenanceData = tmp["inMaintenance"].(bool)
-
-							// let the user know that we did it
-							fmt.Printf("-> updated maintenance status\n")
-
-						}
+						// let the user know that we did it
+						fmt.Printf("-> updated maintenance status\n")
 
 					}
 
 				}
 
 				// timeout
-				time.Sleep(time.Duration(timeoutForAutomatic) * time.Second)
+				time.Sleep(time.Duration(maintenanceTimeout) * time.Second)
+
+			}
+
+		}()
+
+	}
+
+	// check if we use a goroutine to update banlists
+	if pullBansFromURL == true {
+
+		// start it
+		go func() {
+
+			// do this forever
+			for {
+
+				// temporary variables for unpacking the data
+				tmp := make(map[interface{}]interface{})
+
+				// update the bans
+				updateData, err := get(banURL)
+				if err != nil {
+
+					// just show a message and go on
+					fmt.Printf("[err]: your banlist update url might be invalid, please check this...\n")
+
+				} else {
+
+					// unmarshal yaml data gotten from the url
+					err = yaml.Unmarshal([]byte(updateData), tmp)
+
+					// handle errors
+					if err != nil {
+
+						// show an error message if needed
+						fmt.Printf("[err]: the data at your maintenance update url is invalid yaml...\n")
+
+					} else {
+
+						// move this data into the ban data variable
+						banData = tmp
+
+						// let the user know
+						fmt.Printf("-> updated banlists...\n")
+
+					}
+
+				}
+
+				// timeout
+				time.Sleep(time.Duration(banlistTimeout) * time.Second)
 
 			}
 

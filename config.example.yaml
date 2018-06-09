@@ -3,16 +3,20 @@ options:
   # do we use https? (only use behind reverse proxy that adds https)
   https: true
 
-  # endpoint to use for the xml
-  endpoint: "/miiverse/xml"
-
   # port to use for the server
   port: 5432
+
+  # endpoint to use for the xml
+  endpoint: "/miiverse/xml"
 
   # basically how much work should it take the cpu of your server
   # to compute the hashes of servicetokens. the higher it is, the
   # more work it takes
   hashCost: 8
+
+  # set this to true to always use the discovery endpoint
+  # specified below in the endpoints section
+  overrideDiscovery: false
 
   # this can either be what it is now, which is a boolean,
   # or it can be a url that directs to an endpoint which returns
@@ -23,15 +27,6 @@ options:
   # (in yaml)
   # 
   maintenance: false
-
-  # set this to true to always use the discovery endpoint
-  # specified below in the endpoints section
-  overrideDiscovery: false
-
-  cache:
-
-    # timeout in seconds for the automatic endpoint method
-    autoTimeout: 1
 
   # this can be either be what is is now, which is
   # a map of hashed servicetokens encoded in hexadecimal to a map
@@ -50,6 +45,16 @@ options:
     token-goes-here:
       reason: "haha-yes"
 
+  # cache settings
+  # (these are only used if you have either the banlist or maintenance status update from a url)
+  cache:
+
+    # timeout (in seconds) for how long to wait before updating the maintenance status
+    maintenanceTimeout: 1
+
+    # timeout (in seconds) for how long to wait before updating the banlist
+    banlistTimeout: 1
+
 # groups of sets of endpoints that certain servicetokens point to
 endpoints:
 
@@ -67,8 +72,9 @@ endpoints:
     wiiu: "wiiu.your-host.xyz"
     3ds: "3ds.your-host.xyz"
 
-# contains servicetokens and the group they match to
-# all servicetokens go to the default group unless otherwise specified
+# contains servicetokens and the group they match to.
+# all hex-formatted and hashed servicetokens go to the
+# default group unless otherwise specified
 groupdefs:
 
   # a servicetoken group definition. any client with servicetoken-one uses the endpoints in group-name
