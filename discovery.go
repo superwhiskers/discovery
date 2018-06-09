@@ -130,7 +130,18 @@ func discoveryHandler(w http.ResponseWriter, r *http.Request) {
 		for hash, banMap := range banData {
 
 			// check if they're banned
-			if compareHash(r.Header.Get("X-Nintendo-Servicetoken"), hash.(string)) == true {
+			banned, err := compareHash(r.Header.Get("X-Nintendo-Servicetoken"), hash.(string))
+
+			// check for errors decoding
+			if err != nil {
+
+				// show the error
+				fmt.Printf("[err]: %s is not a hexadecimal-encoded hash...", hash.(string))
+
+			}
+
+			// check if they're banned
+			if banned == true {
 
 				// they're banned, so we can respond with a ban message
 				fabricatedXML = &result{

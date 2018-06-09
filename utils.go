@@ -9,6 +9,8 @@ package main
 
 import (
 	// internals
+	"encoding/hex"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	// externals
@@ -58,18 +60,31 @@ func hash(object string, cost int) (string, error) {
 	// use bcrypt
 	bytes, err := bcrypt.GenerateFromPassword([]byte(object), cost)
 
-	// return that data
-	return string(bytes[:]), err
+	// return that data as hexadecimal
+	return hex.EncodeToString(bytes), err
 
 }
 
 // compare a hash and an object
-func compareHash(object, hash string) bool {
+func compareHash(object, hash string) (bool, error) {
+
+	// decode it from hexadecimal
+	byteHash, err := hex.DecodeString(hash)
+
+	// check for errors
+	if err != nil {
+
+		// return it
+		return false, err
+
+	}
 
 	// compare them
-	err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(object))
+	err = bcrypt.CompareHashAndPassword(byteHash, []byte(object))
+
+	fmt.Printf("%v", err)
 
 	// return if they're the same
-	return err == nil
+	return err == nil, nil
 
 }
