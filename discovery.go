@@ -35,7 +35,6 @@ var err error
 var banData map[interface{}]interface{}
 var defaultEndpoints map[interface{}]interface{}
 var maintenanceData bool
-var fabricatedXML *result
 var marshalledXML []byte
 var overrideDiscovery bool
 var groupdefs map[interface{}]interface{}
@@ -43,6 +42,9 @@ var endpoints map[interface{}]interface{}
 
 // the handler for the discovery endpoint
 func discoveryHandler(w http.ResponseWriter, r *http.Request) {
+
+	// the response
+	fabricatedXML := &result{}
 
 	// trigger to tell if we will actually be able to ban it
 	attemptToBan := true
@@ -145,7 +147,10 @@ func discoveryHandler(w http.ResponseWriter, r *http.Request) {
 
 		}
 
-	} else {
+	}
+	
+	// check if we've already created a response to send
+	if fabricatedXML == &result{} {
 
 		// standard mode
 

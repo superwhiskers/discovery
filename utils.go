@@ -56,7 +56,7 @@ func get(url string) (string, string, error) {
 func hash(object string) (string, error) {
 
 	// use bcrypt
-	bytes, err := bcrypt.GenerateFromPassword([]byte(object), 8)
+	bytes, err := bcrypt.GenerateFromPassword([]byte(object), 14)
 
 	// return that data
 	return string(bytes[:]), err
