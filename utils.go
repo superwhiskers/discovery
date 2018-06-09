@@ -10,7 +10,6 @@ package main
 import (
 	// internals
 	"encoding/hex"
-	"fmt"
 	"io/ioutil"
 	"net/http"
 	// externals
@@ -81,8 +80,6 @@ func compareHash(object, hash string) (bool, error) {
 
 	// compare them
 	err = bcrypt.CompareHashAndPassword(byteHash, []byte(object))
-
-	fmt.Printf("%v", err)
 
 	// return if they're the same
 	return err == nil, nil
