@@ -303,9 +303,6 @@ func main() {
 	// cache settings
 	cacheSettings := settings["cache"].(map[interface{}]interface{})
 
-	// do we allow using timeouts to update cache
-	updateCacheByTimeout := cacheSettings["useTimeout"].(bool)
-
 	// timeouts for the automatic cache update and endpoint, respectively
 	timeoutForAutomatic := cacheSettings["autoTimeout"].(int)
 
@@ -361,7 +358,7 @@ func main() {
 	}
 
 	// check if we need to start a goroutine to update the status of the server
-	if (pullMaintenanceFromURL == true || pullBansFromURL == true) && (updateCacheByTimeout == true) {
+	if pullMaintenanceFromURL == true || pullBansFromURL == true {
 
 		// start it
 		go func() {

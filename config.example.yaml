@@ -31,10 +31,6 @@ options:
 
   cache:
 
-    # set this to true if you want to use the automatic (timeout)
-    # based update method
-    useTimeout: true
-
     # timeout in seconds for the automatic endpoint method
     autoTimeout: 1
 
