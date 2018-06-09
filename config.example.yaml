@@ -1,21 +1,22 @@
 options:
 
-  # do we use https? (only use behind reverse proxy that adds https)
+  # do we use https? 
+  # (only disable when discovery is behind a reverse proxy that adds https)
   https: true
 
   # port to use for the server
   port: 5432
 
-  # endpoint to use for the xml
+  # endpoint to send the discovery xml at
   endpoint: "/miiverse/xml"
 
-  # basically how much work should it take the cpu of your server
-  # to compute the hashes of servicetokens. the higher it is, the
-  # more work it takes
+  # increase this number to increase cpu-intensivity of the hashing function
+  # and therefore, making the hashed servicetokens harder to crack
   hashCost: 8
 
   # set this to true to always use the discovery endpoint
-  # specified below in the endpoints section
+  # specified below in the endpoints section instead of automatically
+  # detecting where it is located
   overrideDiscovery: false
 
   # this can either be what it is now, which is a boolean,
@@ -65,7 +66,7 @@ endpoints:
     wiiu: "wiiu.your-host.xyz"
     3ds: "3ds.your-host.xyz"
 
-  # another optional group
+  # an optional group
   group-name:
     discovery: "discovery.your-host.xyz"
     api: "api.your-host.xyz"
