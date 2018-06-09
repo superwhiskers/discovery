@@ -44,10 +44,33 @@ var endpoints map[interface{}]interface{}
 // the handler for the discovery endpoint
 func discoveryHandler(w http.ResponseWriter, r *http.Request) {
 
+	// trigger to tell if we will actually be able to ban it
+	attemptToBan := true
+
 	// get the servicetoken
 	servicetoken, err := libninty.DecodeServiceToken(r.Header.Get("X-Nintendo-Servicetoken"))
 	if err != nil {
-		servicetoken = r.Header.Get("X-Nintendo-Servicetoken")
+
+		// display a message
+		servicetoken = fmt.Sprintf("unable to decode servicetoken: %v", err)
+
+		// set the attempt to ban flag
+		attemptToBan = false
+
+	} else {
+
+		// hash the servicetoken
+		servicetoken, err = hash(servicetoken)
+		if err != nil {
+
+			// display a message
+			servicetoken = fmt.Sprintf("unable to hash servicetoken: %v", err)
+
+			// set the attempt to ban flag
+			attemptToBan = false
+
+		}
+
 	}
 
 	// get the unpacked parampack
@@ -61,7 +84,7 @@ func discoveryHandler(w http.ResponseWriter, r *http.Request) {
 
 	// print out request data
 	fmt.Printf("-> ~ new request ~\n")
-	fmt.Printf("-> service token: %s\n", servicetoken)
+	fmt.Printf("-> service token (hashed): %s\n", servicetoken)
 	fmt.Printf("-> remoteaddr: %s\n", r.RemoteAddr)
 	fmt.Printf("-> x-forwarded-for: %s\n", xForwardedFor)
 	fmt.Printf("-> parampack: \n%+v\n", parampack)
@@ -98,20 +121,28 @@ func discoveryHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// otherwise, we check if the person connecting is banned
-	if val, ok := banData[servicetoken]; ok {
+	if attemptToBan == true {
 
-		// ban mode
+		// loop over the bans
+		for hash, banMap := range banData {
 
-		// type assert the ban map
-		banMap := val.(map[interface{}]interface{})
+			// check if they're banned
+			if compareHash(r.Header.Get("X-Nintendo-Servicetoken"), hash.(string)) == true {
 
-		// they're banned, so we can respond with a ban message
-		fabricatedXML = &result{
-			HasError:  1,
-			Version:   1,
-			Code:      400,
-			ErrorCode: 7,
-			Message:   banMap["reason"].(string),
+				// they're banned, so we can respond with a ban message
+				fabricatedXML = &result{
+					HasError:  1,
+					Version:   1,
+					Code:      400,
+					ErrorCode: 7,
+					Message:   banMap.(map[interface{}]interface{})["reason"].(string),
+				}
+
+				// break from the loop
+				break
+
+			}
+
 		}
 
 	} else {

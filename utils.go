@@ -8,8 +8,11 @@ utilities for the program
 package main
 
 import (
+	// internals
 	"io/ioutil"
 	"net/http"
+	// externals
+	"golang.org/x/crypto/bcrypt"
 )
 
 // function to get data from a URL.
@@ -46,5 +49,27 @@ func get(url string) (string, string, error) {
 
 	// return the request response
 	return ret, res.Header.Get("Content-Type"), nil
+
+}
+
+// object hashing
+func hash(object string) (string, error) {
+
+	// use bcrypt
+	bytes, err := bcrypt.GenerateFromPassword([]byte(object), 8)
+
+	// return that data
+	return string(bytes[:]), err
+
+}
+
+// compare a hash and an object
+func compareHash(object, hash string) bool {
+
+	// compare them
+	err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(object))
+
+	// return if they're the same
+	return err == nil
 
 }
