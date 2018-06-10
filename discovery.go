@@ -12,7 +12,7 @@ package main
 import (
 	"gitlab.com/superwhiskers/libninty"
 	// internals
-
+	"encoding/json"
 	"encoding/xml"
 	"fmt"
 	"log"
@@ -21,7 +21,8 @@ import (
 	"time"
 	// externals
 	"github.com/gorilla/mux"
-	"gopkg.in/yaml.v2"
+	//"gopkg.in/yaml.v3" when yaml.v3 is available, i will use that instead
+	"github.com/Navops/yaml"
 )
 
 // a set of variables
@@ -29,14 +30,14 @@ var maintenanceURL string
 var banURL string
 var updateJSON string
 var err error
-var banData map[interface{}]interface{}
-var defaultEndpoints map[interface{}]interface{}
+var banData map[string]interface{}
+var defaultEndpoints map[string]interface{}
 var maintenanceData bool
 var marshalledXML []byte
 var overrideDiscovery bool
 var bcryptCost int
-var groupdefs map[interface{}]interface{}
-var endpoints map[interface{}]interface{}
+var groupdefs map[string]interface{}
+var endpoints map[string]interface{}
 
 // the handler for the discovery endpoint
 func discoveryHandler(w http.ResponseWriter, r *http.Request) {
@@ -127,13 +128,13 @@ func discoveryHandler(w http.ResponseWriter, r *http.Request) {
 		for hash, banMap := range banData {
 
 			// check if they're banned
-			banned, err := compareHash(r.Header.Get("X-Nintendo-Servicetoken"), hash.(string))
+			banned, err := compareHash(r.Header.Get("X-Nintendo-Servicetoken"), hash)
 
 			// check for errors decoding
 			if err != nil {
 
 				// show the error
-				fmt.Printf("[err]: %s is not a hexadecimal-encoded hash...", hash.(string))
+				fmt.Printf("[err]: %s is not a hexadecimal-encoded hash...", hash)
 
 			}
 
@@ -249,7 +250,7 @@ func discoveryHandler(w http.ResponseWriter, r *http.Request) {
 // the main function, obviously
 func main() {
 
-	config := make(map[interface{}]interface{})
+	config := make(map[string]interface{})
 
 	// get the file data
 	confByte, err := readFileByte("config.yaml")
@@ -285,14 +286,14 @@ func main() {
 	var pullBansFromURL bool
 
 	// get some config sections from the config
-	settings := config["options"].(map[interface{}]interface{})
-	endpoints = config["endpoints"].(map[interface{}]interface{})
+	settings := config["options"].(map[string]interface{})
+	endpoints = config["endpoints"].(map[string]interface{})
 
 	// default endpoints
-	defaultEndpoints = endpoints["default"].(map[interface{}]interface{})
+	defaultEndpoints = endpoints["default"].(map[string]interface{})
 
 	// group definitions
-	groupdefs = config["groupdefs"].(map[interface{}]interface{})
+	groupdefs = config["groupdefs"].(map[string]interface{})
 
 	// settings
 
@@ -309,7 +310,7 @@ func main() {
 	serverPort := settings["port"].(int)
 
 	// cache settings
-	cacheSettings := settings["cache"].(map[interface{}]interface{})
+	cacheSettings := settings["cache"].(map[string]interface{})
 
 	// timeout (in seconds) for maintenance status updates
 	maintenanceTimeout := cacheSettings["maintenanceTimeout"].(int)
@@ -354,11 +355,11 @@ func main() {
 	case string:
 		pullBansFromURL = true
 		banURL = settings["bans"].(string)
-		banData = map[interface{}]interface{}{}
+		banData = map[string]interface{}{}
 
-	case map[interface{}]interface{}:
+	case map[string]interface{}:
 		pullBansFromURL = false
-		banData = settings["bans"].(map[interface{}]interface{})
+		banData = settings["bans"].(map[string]interface{})
 
 	default:
 		fmt.Printf("[err]: the bans field in the options must either be a map of strings\n")
@@ -378,7 +379,7 @@ func main() {
 			for {
 
 				// temporary variables for unpacking the data
-				tmp := make(map[interface{}]interface{})
+				var tmp interface{}
 
 				// update the maintenance status
 				updateData, err := get(maintenanceURL)
@@ -389,19 +390,19 @@ func main() {
 
 				} else {
 
-					// unmarshal yaml data gotten from the url
-					err = yaml.Unmarshal([]byte(updateData), tmp)
+					// unmarshal json data gotten from the url
+					err = json.Unmarshal([]byte(updateData), &tmp)
 
 					// handle errors
 					if err != nil {
 
 						// show an error message if needed
-						fmt.Printf("[err]: the data at your maintenance update url is invalid yaml...\n")
+						fmt.Printf("[err]: the data at your maintenance update url is invalid json...\n")
 
 					} else {
 
 						// move this data into the variable
-						maintenanceData = tmp["inMaintenance"].(bool)
+						maintenanceData = tmp.(map[string]interface{})["inMaintenance"].(bool)
 
 						// let the user know that we did it
 						fmt.Printf("-> updated maintenance status\n")
@@ -429,7 +430,7 @@ func main() {
 			for {
 
 				// temporary variables for unpacking the data
-				tmp := make(map[interface{}]interface{})
+				var tmp interface{}
 
 				// update the bans
 				updateData, err := get(banURL)
@@ -440,19 +441,19 @@ func main() {
 
 				} else {
 
-					// unmarshal yaml data gotten from the url
-					err = yaml.Unmarshal([]byte(updateData), tmp)
+					// unmarshal json data gotten from the url
+					err = json.Unmarshal([]byte(updateData), &tmp)
 
 					// handle errors
 					if err != nil {
 
 						// show an error message if needed
-						fmt.Printf("[err]: the data at your maintenance update url is invalid yaml...\n")
+						fmt.Printf("[err]: the data at your maintenance update url is invalid json...\n")
 
 					} else {
 
 						// move this data into the ban data variable
-						banData = tmp
+						banData = tmp.(map[string]interface{})
 
 						// let the user know
 						fmt.Printf("-> updated banlists...\n")

@@ -23,9 +23,9 @@ options:
   # or it can be a url that directs to an endpoint which returns
   # a response like this:
   # 
-  # inMaintenance: false
+  # { "inMaintenance": false }
   # 
-  # (in yaml)
+  # (in json)
   # 
   maintenance: false
 
@@ -33,13 +33,9 @@ options:
   # a map of hashed servicetokens encoded in hexadecimal to a map
   # with a reason, or a url to an endpoint on a server that returns a response like this:
   #
-  # one-servicetoken:
-  #   reason: "haha-yes"
-  #
-  # two-servicetoken:
-  #   reason: "haha-yes"
+  # { "one-servicetoken": { "reason": "haha-yes" }, "two-servicetoken": { "reason": "haha-yes" } }
   # 
-  # (with the hexadecimal hashed tokens grabbed from the log) (in yaml)
+  # (with the hexadecimal hashed tokens grabbed from the log) (in json)
   # 
   bans:
 
