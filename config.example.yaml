@@ -10,6 +10,9 @@ options:
   # endpoint to send the discovery xml at
   endpoint: "/miiverse/xml"
 
+  # file to output logs to
+  logfile: "discovery.log"
+
   # increase this number to increase cpu-intensivity of the hashing function
   # and therefore, making the hashed servicetokens harder to crack
   hashCost: 8

@@ -10,6 +10,8 @@ if you want a copy, go to http://www.gnu.org/licenses/
 package main
 
 import (
+	"io"
+
 	"gitlab.com/superwhiskers/libninty"
 	// internals
 	"encoding/json"
@@ -18,11 +20,12 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"reflect"
 	"time"
 	// externals
 	"github.com/gorilla/mux"
 	//"gopkg.in/yaml.v3" when yaml.v3 is available, i will use that instead
-	"github.com/Navops/yaml"
+	"github.com/superwhiskers/yaml"
 )
 
 // a set of variables
@@ -77,18 +80,18 @@ func discoveryHandler(w http.ResponseWriter, r *http.Request) {
 	// get the unpacked parampack
 	parampack, err := libninty.DecodeParampack(r.Header.Get("X-Nintendo-Parampack"))
 	if err != nil {
-		fmt.Printf("-> unable to decode parampack. shown data is a nullified parampack\n")
+		log.Printf("-> unable to decode parampack. shown data is a nullified parampack\n")
 	}
 
 	// get x-forwarded-for
 	xForwardedFor := r.Header.Get("X-Forwarded-For")
 
 	// print out request data
-	fmt.Printf("-> ~ new request ~\n")
-	fmt.Printf("-> service token (hashed): %s\n", servicetoken)
-	fmt.Printf("-> remoteaddr: %s\n", r.RemoteAddr)
-	fmt.Printf("-> x-forwarded-for: %s\n", xForwardedFor)
-	fmt.Printf("-> parampack: \n%+v\n", parampack)
+	log.Printf("-> ~ new request ~\n")
+	log.Printf("-> service token (hashed): %s\n", servicetoken)
+	log.Printf("-> remoteaddr: %s\n", r.RemoteAddr)
+	log.Printf("-> x-forwarded-for: %s\n", xForwardedFor)
+	log.Printf("-> parampack: \n%+v\n", parampack)
 
 	// first, check if we are in maintenance mode
 	if maintenanceData == true {
@@ -108,7 +111,9 @@ func discoveryHandler(w http.ResponseWriter, r *http.Request) {
 		marshalledXML, err = xml.MarshalIndent(fabricatedXML, "  ", "    ")
 		if err != nil {
 
-			fmt.Printf("[err]: could not marshal xml...\n")
+			// output an error message if an error occured
+			log.Printf("[err]: could not marshal xml...\n")
+			log.Printf("       error: %v\n", err)
 
 		}
 
@@ -134,7 +139,7 @@ func discoveryHandler(w http.ResponseWriter, r *http.Request) {
 			if err != nil {
 
 				// show the error
-				fmt.Printf("[err]: %s is not a hexadecimal-encoded hash...", hash)
+				log.Printf("[err]: %s is not a hexadecimal-encoded hash...", hash)
 
 			}
 
@@ -237,7 +242,9 @@ func discoveryHandler(w http.ResponseWriter, r *http.Request) {
 	marshalledXML, err = xml.MarshalIndent(fabricatedXML, "  ", "    ")
 	if err != nil {
 
-		fmt.Printf("[err]: could not marshal xml...\n")
+		// output an error message if an error occured
+		log.Printf("[err]: could not marshal xml...\n")
+		log.Printf("       error: %v\n", err)
 
 	}
 
@@ -250,6 +257,10 @@ func discoveryHandler(w http.ResponseWriter, r *http.Request) {
 // the main function, obviously
 func main() {
 
+	// set the default map type
+	*yaml.DefaultMapType = reflect.TypeOf(map[string]interface{}{})
+
+	// variable that the config is parsed into
 	config := make(map[string]interface{})
 
 	// get the file data
@@ -297,6 +308,29 @@ func main() {
 
 	// settings
 
+	// get the logfile path
+	logfile := settings["logfile"].(string)
+
+	// open the file
+	file, err := os.OpenFile(logfile, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+
+	// check for errors
+	if err != nil {
+
+		// show an error message
+		fmt.Printf("[err]: unable to open file %s...", logfile)
+
+		// panic
+		panic(err)
+
+	}
+
+	// close it when this function returns
+	defer file.Close()
+
+	// set the output for the logger
+	log.SetOutput(io.MultiWriter(os.Stdout, file))
+
 	// do we override the automatic discovery endpoint calculation
 	overrideDiscovery = settings["overrideDiscovery"].(bool)
 
@@ -321,7 +355,7 @@ func main() {
 	// maintenance is either a url to get a plaintext
 	// response from (like this:
 	//
-	// inMaintenance: false
+	// { "inMaintenance": false }
 	//
 	// ) or a boolean
 	switch settings["maintenance"].(type) {
@@ -336,8 +370,8 @@ func main() {
 		maintenanceData = settings["maintenance"].(bool)
 
 	default:
-		fmt.Printf("\n[err]: the maintenance field in the options must either be a boolean\n")
-		fmt.Printf("       or a string of a url to a website where the server can fetch the status...\n")
+		log.Printf("\n[err]: the maintenance field in the options must either be a boolean\n")
+		log.Printf("       or a string of a url to a website where the server can fetch the status...\n")
 		os.Exit(1)
 
 	}
@@ -345,9 +379,7 @@ func main() {
 	// banList is either a url to get a plaintext
 	// response from (like this:
 	//
-	// one-servicetoken: haha-yes
-	// two-servicetoken: haha&yes
-	// three-servicetoken: haha*yes
+	// { "one-servicetoken": { "reason": "haha-yes" }, "two-servicetoken": { "reason": "haha-yes" } }
 	//
 	// ) or a list of banned servicetokens
 	switch settings["bans"].(type) {
@@ -362,9 +394,9 @@ func main() {
 		banData = settings["bans"].(map[string]interface{})
 
 	default:
-		fmt.Printf("[err]: the bans field in the options must either be a map of strings\n")
-		fmt.Printf("       containing banned servicetokens or a url that points to an endpoint\n")
-		fmt.Printf("       that will return a map of banned servicetokens...\n")
+		log.Printf("[err]: the bans field in the options must either be a map of strings\n")
+		log.Printf("       containing banned servicetokens or a url that points to an endpoint\n")
+		log.Printf("       that will return a map of banned servicetokens...\n")
 		os.Exit(1)
 
 	}
@@ -386,7 +418,7 @@ func main() {
 				if err != nil {
 
 					// same here
-					fmt.Printf("[err]: your maintenance update url might be invalid\n")
+					log.Printf("[err]: your maintenance update url might be invalid\n")
 
 				} else {
 
@@ -397,7 +429,7 @@ func main() {
 					if err != nil {
 
 						// show an error message if needed
-						fmt.Printf("[err]: the data at your maintenance update url is invalid json...\n")
+						log.Printf("[err]: the data at your maintenance update url is invalid json...\n")
 
 					} else {
 
@@ -405,7 +437,7 @@ func main() {
 						maintenanceData = tmp.(map[string]interface{})["inMaintenance"].(bool)
 
 						// let the user know that we did it
-						fmt.Printf("-> updated maintenance status\n")
+						log.Printf("-> updated maintenance status\n")
 
 					}
 
@@ -437,7 +469,7 @@ func main() {
 				if err != nil {
 
 					// just show a message and go on
-					fmt.Printf("[err]: your banlist update url might be invalid, please check this...\n")
+					log.Printf("[err]: your banlist update url might be invalid, please check this...\n")
 
 				} else {
 
@@ -448,7 +480,7 @@ func main() {
 					if err != nil {
 
 						// show an error message if needed
-						fmt.Printf("[err]: the data at your maintenance update url is invalid json...\n")
+						log.Printf("[err]: the data at your maintenance update url is invalid json...\n")
 
 					} else {
 
@@ -456,7 +488,7 @@ func main() {
 						banData = tmp.(map[string]interface{})
 
 						// let the user know
-						fmt.Printf("-> updated banlists...\n")
+						log.Printf("-> updated banlists...\n")
 
 					}
 
@@ -486,7 +518,7 @@ func main() {
 	}
 
 	// start the server
-	fmt.Printf("-> starting server...\n")
+	log.Printf("-> starting server...\n")
 
 	// do we use https?
 	if settings["https"].(bool) == true {
