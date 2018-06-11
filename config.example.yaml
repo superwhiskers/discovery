@@ -55,6 +55,9 @@ options:
     # timeout (in seconds) for how long to wait before updating the banlist
     banlistTimeout: 1
 
+    # timeout (in seconds) for how long to wait before updating the groupdefs
+    groupdefsTimeout: 1
+
 # groups of sets of endpoints that certain servicetokens point to
 endpoints:
 
@@ -73,8 +76,14 @@ endpoints:
     3ds: "3ds.your-host.xyz"
 
 # contains servicetokens and the group they match to.
-# all hex-formatted and hashed servicetokens go to the
-# default group unless otherwise specified
+# all hex-formatted and hashed. servicetokens go to the
+# default group unless otherwise specified here. can be a url string
+# that points to an endpoint that returns something like this:
+# 
+# { "servicetoken-one": "group-name" }
+# 
+# (with hexadecimal hashed tokens grabbed from the log) (in json)
+# 
 groupdefs:
 
   # a servicetoken group definition. any client with servicetoken-one uses the endpoints in group-name

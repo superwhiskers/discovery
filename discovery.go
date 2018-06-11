@@ -10,13 +10,11 @@ if you want a copy, go to http://www.gnu.org/licenses/
 package main
 
 import (
-	"io"
-
-	"gitlab.com/superwhiskers/libninty"
 	// internals
 	"encoding/json"
 	"encoding/xml"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"os"
@@ -24,23 +22,27 @@ import (
 	"time"
 	// externals
 	"github.com/gorilla/mux"
-	//"gopkg.in/yaml.v3" when yaml.v3 is available, i will use that instead
 	"github.com/superwhiskers/yaml"
+	"gitlab.com/superwhiskers/libninty"
+	//"gopkg.in/yaml.v3" when yaml.v3 is available, i will use that instead
 )
 
 // a set of variables
-var maintenanceURL string
-var banURL string
-var updateJSON string
-var err error
-var banData map[string]interface{}
-var defaultEndpoints map[string]interface{}
-var maintenanceData bool
-var marshalledXML []byte
-var overrideDiscovery bool
-var bcryptCost int
-var groupdefs map[string]interface{}
-var endpoints map[string]interface{}
+var (
+	maintenanceURL    string
+	groupdefsURL      string
+	banURL            string
+	updateJSON        string
+	err               error
+	banData           map[string]interface{}
+	defaultEndpoints  map[string]interface{}
+	maintenanceData   bool
+	marshalledXML     []byte
+	overrideDiscovery bool
+	bcryptCost        int
+	endpoints         map[string]interface{}
+	groupdefsData     map[string]interface{}
+)
 
 // the handler for the discovery endpoint
 func discoveryHandler(w http.ResponseWriter, r *http.Request) {
@@ -91,7 +93,7 @@ func discoveryHandler(w http.ResponseWriter, r *http.Request) {
 	log.Printf("-> service token (hashed): %s\n", servicetoken)
 	log.Printf("-> remoteaddr: %s\n", r.RemoteAddr)
 	log.Printf("-> x-forwarded-for: %s\n", xForwardedFor)
-	log.Printf("-> parampack: \n%+v\n", parampack)
+	log.Printf("-> parampack: %+v\n", parampack)
 
 	// first, check if we are in maintenance mode
 	if maintenanceData == true {
@@ -139,7 +141,7 @@ func discoveryHandler(w http.ResponseWriter, r *http.Request) {
 			if err != nil {
 
 				// show the error
-				log.Printf("[err]: %s is not a hexadecimal-encoded hash...", hash)
+				log.Printf("[err]: %s is not a hexadecimal-encoded hash...\n", hash)
 
 			}
 
@@ -167,28 +169,51 @@ func discoveryHandler(w http.ResponseWriter, r *http.Request) {
 	// check if we've already created a response to send
 	if fabricatedXML == nil {
 
-		// standard mode
-
 		// check if we override discovery
 		if overrideDiscovery == true {
 
-			// check if we use a different set of endpoints for this client
-			if val, ok := groupdefs[servicetoken]; ok {
+			// the match variable that we use to check if we ever found a match
+			match := false
 
-				// we do
-				endpointset := endpoints[val.(string)].(map[interface{}]interface{})
+			// loop over the groupdefs
+			for hash, group := range groupdefsData {
 
-				// and fabricate the response
-				fabricatedXML = &result{
-					HasError:   0,
-					Version:    1,
-					Host:       endpointset["discovery"].(string),
-					APIHost:    endpointset["api"].(string),
-					PortalHost: endpointset["wiiu"].(string),
-					N3DSHost:   endpointset["3ds"].(string),
+				// check if the servicetokens match
+				match, err = compareHash(r.Header.Get("X-Nintendo-Servicetoken"), hash)
+
+				// check for errors decoding
+				if err != nil {
+
+					// show the error
+					log.Printf("[err]: %s is not a hexadecimal-encoded hash...\n", hash)
+
 				}
 
-			} else {
+				// check if they're banned
+				if match == true {
+
+					// we do
+					endpointset := endpoints[group.(string)].(map[string]interface{})
+
+					// and fabricate the response
+					fabricatedXML = &result{
+						HasError:   0,
+						Version:    1,
+						Host:       endpointset["discovery"].(string),
+						APIHost:    endpointset["api"].(string),
+						PortalHost: endpointset["wiiu"].(string),
+						N3DSHost:   endpointset["3ds"].(string),
+					}
+
+					// break from the loop
+					break
+
+				}
+
+			}
+
+			// if match was never set to true, we need to give them the standard endpoints
+			if match == false {
 
 				// otherwise, fabricate the response as normal
 				fabricatedXML = &result{
@@ -204,23 +229,48 @@ func discoveryHandler(w http.ResponseWriter, r *http.Request) {
 
 		} else {
 
-			// check if we use a different set of endpoints for this client
-			if val, ok := groupdefs[servicetoken]; ok {
+			// the match variable that we use to check if we ever found a match
+			match := false
 
-				// we do
-				endpointset := endpoints[val.(string)].(map[interface{}]interface{})
+			// loop over the groupdefs
+			for hash, group := range groupdefsData {
 
-				// and fabricate the response
-				fabricatedXML = &result{
-					HasError:   0,
-					Version:    1,
-					Host:       r.Host,
-					APIHost:    endpointset["api"].(string),
-					PortalHost: endpointset["wiiu"].(string),
-					N3DSHost:   endpointset["3ds"].(string),
+				// check if the servicetokens match
+				match, err = compareHash(r.Header.Get("X-Nintendo-Servicetoken"), hash)
+
+				// check for errors decoding
+				if err != nil {
+
+					// show the error
+					log.Printf("[err]: %s is not a hexadecimal-encoded hash...\n", hash)
+
 				}
 
-			} else {
+				// check if they're banned
+				if match == true {
+
+					// we do
+					endpointset := endpoints[group.(string)].(map[string]interface{})
+
+					// and fabricate the response
+					fabricatedXML = &result{
+						HasError:   0,
+						Version:    1,
+						Host:       r.Host,
+						APIHost:    endpointset["api"].(string),
+						PortalHost: endpointset["wiiu"].(string),
+						N3DSHost:   endpointset["3ds"].(string),
+					}
+
+					// break from the loop
+					break
+
+				}
+
+			}
+
+			// if match was never set to true, we need to give them the standard endpoints
+			if match == false {
 
 				// otherwise, fabricate the response as normal
 				fabricatedXML = &result{
@@ -270,7 +320,7 @@ func main() {
 	if err != nil {
 
 		// show a message
-		fmt.Printf("\n[err]: error while loading config.yaml.\n")
+		fmt.Printf("[err]: error while loading config.yaml.\n")
 		fmt.Printf("       you should copy config.example.yaml to config.yaml and edit it.\n")
 
 		// exit
@@ -285,7 +335,7 @@ func main() {
 	if err != nil {
 
 		// show a message
-		fmt.Printf("\n[err]: there is an error in your yaml in config.yaml...\n")
+		fmt.Printf("[err]: there is an error in your yaml in config.yaml...\n")
 
 		// and show a traceback
 		panic(err)
@@ -293,32 +343,35 @@ func main() {
 	}
 
 	// predefine some variables
-	var pullMaintenanceFromURL bool
-	var pullBansFromURL bool
+	var (
+		pullMaintenanceFromURL bool
+		pullBansFromURL        bool
+		pullGroupdefsFromURL   bool
+	)
 
-	// get some config sections from the config
-	settings := config["options"].(map[string]interface{})
+	// set some others
+	var (
+		settings      = config["options"].(map[string]interface{})
+		logfile       = settings["logfile"].(string)
+		serverPort    = settings["port"].(int)
+		cacheSettings = settings["cache"].(map[string]interface{})
+	)
+
+	// these have to be left out because we're modifying existing ones
 	endpoints = config["endpoints"].(map[string]interface{})
-
-	// default endpoints
+	bcryptCost = settings["hashCost"].(int)
+	overrideDiscovery = settings["overrideDiscovery"].(bool)
+	endpointForDiscovery := settings["endpoint"].(string)
 	defaultEndpoints = endpoints["default"].(map[string]interface{})
 
-	// group definitions
-	groupdefs = config["groupdefs"].(map[string]interface{})
-
-	// settings
-
-	// get the logfile path
-	logfile := settings["logfile"].(string)
-
-	// open the file
+	// open the logfile
 	file, err := os.OpenFile(logfile, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
 
 	// check for errors
 	if err != nil {
 
 		// show an error message
-		fmt.Printf("[err]: unable to open file %s...", logfile)
+		fmt.Printf("[err]: unable to open file %s...\n", logfile)
 
 		// panic
 		panic(err)
@@ -331,26 +384,34 @@ func main() {
 	// set the output for the logger
 	log.SetOutput(io.MultiWriter(os.Stdout, file))
 
-	// do we override the automatic discovery endpoint calculation
-	overrideDiscovery = settings["overrideDiscovery"].(bool)
+	// groupdefs is either a url to get a plaintext
+	// response from (like this:
+	//
+	// { "servicetoken-one": "group-name", "servicetoken-two": "group-name" }
+	//
+	// )
+	switch config["groupdefs"].(type) {
 
-	// cost for bcrypt to use
-	bcryptCost = settings["hashCost"].(int)
+	case string:
+		pullGroupdefsFromURL = true
+		groupdefsURL = config["groupdefs"].(string)
+		groupdefsData = map[string]interface{}{}
 
-	// the endpoint to place the discovery data on
-	endpointForDiscovery := settings["endpoint"].(string)
+	case map[string]interface{}:
+		pullGroupdefsFromURL = false
+		groupdefsData = config["groupdefs"].(map[string]interface{})
 
-	// port for the server
-	serverPort := settings["port"].(int)
+	case nil:
+		pullGroupdefsFromURL = false
+		groupdefsData = map[string]interface{}{}
 
-	// cache settings
-	cacheSettings := settings["cache"].(map[string]interface{})
+	default:
+		log.Printf("[err]: the groupdefs field in the config must be either a map[string]interface{} or\n")
+		log.Printf("       a string of a url to a website where the server can fetch the status...\n")
+		log.Printf("current type: %v\n", reflect.TypeOf(config["groupdefs"]))
+		os.Exit(1)
 
-	// timeout (in seconds) for maintenance status updates
-	maintenanceTimeout := cacheSettings["maintenanceTimeout"].(int)
-
-	// timeout (in seconds) for banlist status updates
-	banlistTimeout := cacheSettings["banlistTimeout"].(int)
+	}
 
 	// maintenance is either a url to get a plaintext
 	// response from (like this:
@@ -370,8 +431,9 @@ func main() {
 		maintenanceData = settings["maintenance"].(bool)
 
 	default:
-		log.Printf("\n[err]: the maintenance field in the options must either be a boolean\n")
+		log.Printf("[err]: the maintenance field in the options must either be a boolean\n")
 		log.Printf("       or a string of a url to a website where the server can fetch the status...\n")
+		log.Printf("current type: %v\n", reflect.TypeOf(settings["maintenance"]))
 		os.Exit(1)
 
 	}
@@ -393,10 +455,15 @@ func main() {
 		pullBansFromURL = false
 		banData = settings["bans"].(map[string]interface{})
 
+	case nil:
+		pullBansFromURL = false
+		banData = map[string]interface{}{}
+
 	default:
 		log.Printf("[err]: the bans field in the options must either be a map of strings\n")
 		log.Printf("       containing banned servicetokens or a url that points to an endpoint\n")
 		log.Printf("       that will return a map of banned servicetokens...\n")
+		log.Printf("current type: %v\n", reflect.TypeOf(settings["bans"]))
 		os.Exit(1)
 
 	}
@@ -444,7 +511,7 @@ func main() {
 				}
 
 				// timeout
-				time.Sleep(time.Duration(maintenanceTimeout) * time.Second)
+				time.Sleep(time.Duration(cacheSettings["maintenanceTimeout"].(int)) * time.Second)
 
 			}
 
@@ -495,7 +562,58 @@ func main() {
 				}
 
 				// timeout
-				time.Sleep(time.Duration(banlistTimeout) * time.Second)
+				time.Sleep(time.Duration(cacheSettings["banlistTimeout"].(int)) * time.Second)
+
+			}
+
+		}()
+
+	}
+
+	// check if we use a goroutine to update groupdefs
+	if pullGroupdefsFromURL == true {
+
+		// start it
+		go func() {
+
+			// do this forever
+			for {
+
+				// temporary variables for unpacking the data
+				var tmp interface{}
+
+				// update the bans
+				updateData, err := get(groupdefsURL)
+				if err != nil {
+
+					// just show a message and go on
+					log.Printf("[err]: your groupdefs update url might be invalid, please check this...\n")
+
+				} else {
+
+					// unmarshal json data gotten from the url
+					err = json.Unmarshal([]byte(updateData), &tmp)
+
+					// handle errors
+					if err != nil {
+
+						// show an error message if needed
+						log.Printf("[err]: the data at your groupdefs update url is invalid json...\n")
+
+					} else {
+
+						// move this data into the ban data variable
+						groupdefsData = tmp.(map[string]interface{})
+
+						// let the user know
+						log.Printf("-> updated groupdefs...\n")
+
+					}
+
+				}
+
+				// timeout
+				time.Sleep(time.Duration(cacheSettings["groupdefsTimeout"].(int)) * time.Second)
 
 			}
 
