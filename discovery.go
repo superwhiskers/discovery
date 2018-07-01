@@ -23,6 +23,7 @@ import (
 	// externals
 	"github.com/gorilla/mux"
 	"github.com/superwhiskers/yaml"
+	"github.com/tomasen/realip"
 	"gitlab.com/superwhiskers/libninty"
 	//"gopkg.in/yaml.v3" when yaml.v3 is available, i will use that instead
 )
@@ -91,8 +92,7 @@ func discoveryHandler(w http.ResponseWriter, r *http.Request) {
 	// print out request data
 	log.Printf("-> ~ new request ~\n")
 	log.Printf("-> service token (hashed): %s\n", servicetoken)
-	log.Printf("-> remoteaddr: %s\n", r.RemoteAddr)
-	log.Printf("-> x-forwarded-for: %s\n", xForwardedFor)
+	log.Printf("-> ip address: %s\n", realip.FromRequest(r))
 	log.Printf("-> parampack: %+v\n", parampack)
 
 	// first, check if we are in maintenance mode
