@@ -86,9 +86,6 @@ func discoveryHandler(w http.ResponseWriter, r *http.Request) {
 		log.Printf("-> unable to decode parampack. shown data is a nullified parampack\n")
 	}
 
-	// get x-forwarded-for
-	xForwardedFor := r.Header.Get("X-Forwarded-For")
-
 	// print out request data
 	log.Printf("-> ~ new request ~\n")
 	log.Printf("-> service token (hashed): %s\n", servicetoken)
